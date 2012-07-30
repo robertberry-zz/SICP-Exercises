@@ -70,3 +70,75 @@
 
 ;; give examples? ehhhh?
 
+;; TODO!!!
+
+
+; Exercise 2.10
+
+(defun div-interval-2 (x y)
+  (if (= (upper-bound y) (lower-bound y))
+      (error "Cannot divide by an interval that spans 0.")
+      (mul-interval x
+                    (make-interval (/ 1.0 (upper-bound y))
+                                   (/ 1.0 (lower-bound y))))))
+
+; Exercise 2.11
+
+(defun mul-interval-2 (x y)
+  (let* ((xl (lower-bound x))
+         (xu (upper-bound x))
+         (yl (lower-bound y))
+         (yu (upper-bound y))
+         (xl+ (plusp xl))
+         (xu+ (plusp xu))
+         (yl+ (plusp yl))
+         (yu+ (plusp yu))
+         (xl- (not xl+))
+         (xu- (not xu+))
+         (yl- (not yl+))
+         (yu- (not yu+)))
+    (cond ((and xl- xu- yl- yu-) (make-interval (* xu yu) (* xl yl)))
+          ((and xl- xu+ yl- yu-) (make-interval (* xu yl) (* xl yl)))
+          ((and xl- xu- yl- yu+) (make-interval (* xl yu) (* xl yl)))
+          ((and xl+ xu+ yl- yu-) (make-interval (* xu yl) (* xl yu)))
+          ((and xl- xu- yl+ yu+) (make-interval (* xl yu) (* xu yl)))
+          ((and xl+ xu+ yl+ yu+) (make-interval (* xl yl) (* xu yu)))
+          ((and xl+ xu+ yl- yu+) (make-interval (* xu yl) (* xu yu)))
+          ((and xl- xu+ yl+ yu+) (make-interval (* xl yu) (* xu yu)))
+          ((and xl- xu+ yl- yu+) (make-interval (min (* xl yu) (* xu yl))
+                                                (max (* xl yl) (* xu yu))))
+          (t (error "This should never happen!")))))
+
+;; some tests for this, as it's pretty complex
+
+(defun rand-range (a b)
+  (+ a (random (- b a))))
+
+(defun rand-interval ()
+  (let ((a (rand-range -100 100))
+        (b (rand-range -100 100)))
+    (make-interval (min a b) (max a b))))
+
+(defun interval-eq (a b)
+  (and (= (upper-bound a) (upper-bound b))
+       (= (lower-bound a) (lower-bound b))))
+
+(defun test-mul-interval-2 ()
+  (let ((a (rand-interval))
+        (b (rand-interval)))
+    (if (interval-eq (mul-interval a b)
+                     (mul-interval-2 a b))
+        (format t "~a~%" "All OK!")
+        (format t "~a ~a . ~a~%" "ERROR!" a b))))
+
+(defun redo (f n)
+  (if (= n 0)
+      nil
+      (prog nil
+         (funcall f)
+         (redo f (- n 1)))))
+
+;; Can test like this: (redo #'test-mul-interval-2 100)
+
+; Exercise 2.12
+
