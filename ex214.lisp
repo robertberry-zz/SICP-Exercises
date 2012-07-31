@@ -165,20 +165,26 @@
 
 ; JOY OH JOY MORE MATHS
 
-; tolerance(x1, x2) =  0.5 (x2 - x1)  =  x2 - x1
-;                      -------------     ------
-;                      0.5 (x1 + x2)     x1 + x2  <- this is only ok assuming positive numbers
-
-; 
-;
-
 ; a = [Ca*(1 - 0.5*Ta), Ca*(1 + 0.5*Ta)]
 ; b = [Cb*(1 - 0.5*Ta), Ca*(1 + 0.5*Ta)]
 
-; a*b = [(Ca*(1 - 0.5 * Ta))*(Cb*(1-0.5 * Tb)), (Ca*(1 + 0.5 * Ta))*(Cb*(1+0.5 * Tb))
+; a*b = [(Ca*(1 - 0.5 * Ta))*(Cb*(1-0.5 * Tb)),
+;        (Ca*(1 + 0.5 * Ta))*(Cb*(1+0.5 * Tb))]
 
-; ... 
+; lower = ( Ca - 0.5 Ta Ca ) (Cb - 0.5 Tb Cb )
+;       =   Ca Cb - 0.5 Ta Ca Cb - 0.5 Ca Tb Cb + 0.25 Ta Ca Tb Cb
+;       =   Ca Cb (1 - 0.5 Ta - 0.5 Tb + 0.25 Ta Tb)
+;       =   Ca Cb (1 - 0.5 (Ta + Tb) + 0.25 Ta Tb)
 
+; upper = ( Ca + 0.5 Ta Ca ) (Cb + 0.5 Tb Cb)
+;       =   Ca Cb + 0.5 Tb Cb Ca + 0.5 Ta Ca Cb + 0.25 Ta Tb Ca Cb
+;       =   Ca Cb (1 + 0.5 (Tb + Ta) + 0.25 Ta Tb)
+
+; Tolerance will be half of difference between upper and lower.
+
+; 0.25 Ta Tb will be a tiny number as the tolerances are small anyway, so should be discounted.
+
+; Therefore the tolerance will be roughly the sum of the tolerances of of a and b.
 
 ; Exercise 2.14
 
