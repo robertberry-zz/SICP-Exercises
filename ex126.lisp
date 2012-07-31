@@ -196,7 +196,13 @@
 
 ;; Ex 1.28
 
-(defun miller-rabin-test (n a)
-  (= (expmod a (- n 1) n) (mod 1 n)))
+(defun expmod-2 (base exp m)
+  (cond ((= exp 0) 1)
+        ((evenp exp) (let ((squared (square (expmod-2 base (/ exp 2) m))))
+                       (if (and (/= squared 1) (/= squared -1) (= (square squared) 1))
+                           0
+                           (mod squared m))))
+        (t (mod (* base (expmod-2 base (- exp 1) m)) m))))
 
-; need to do this still ... 
+(defun miller-rabin-test (n a)
+  (= (expmod-2 a (- n 1) n) 1))
