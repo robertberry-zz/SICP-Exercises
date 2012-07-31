@@ -27,12 +27,46 @@
 
 ; Exercise 1.29
 
+(defun integral (f a b dx)
+  (labels ((add-dx (x)
+             (+ x dx)))
+    (* (sum f (+ a (/ dx 2.0)) #'add-dx b)
+       dx)))
 
+(defun simpsons-rule-integral (f a b n)
+  (let ((h (/ (- b a) n)))
+    (labels ((y (k)
+               (funcall f (+ a (* k h))))
+             (iter (k)
+               (if (= k n)
+                   (y n)
+                   (+ (* (cond ((= k 0) 1)
+                               ((oddp k) 4)
+                               (t 2))
+                         (y k))
+                      (iter (1+ k))))))
+      (if (oddp n)
+          (error "n must be an even integer.")
+          (* (/ h 3) (iter 0))))))
 
+(defun cube (n)
+  (* n n n))
 
-;;;; need to do this one!!!
+(defun test-integral (dx)
+  (format t "~a~%" (integral #'cube 0 1 dx)))
 
+(defun test-simpsons-integral (n)
+  (format t "~a~%" (simpsons-rule-integral #'cube 0 1 n)))
 
+;; CL-USER> (test-integral 0.0001)
+;; 0.24991691
+;; NIL
+;; CL-USER> (test-simpsons-integral 100)
+;; 1/4      <- seems to be exact here anyway!
+;; NIL
+;; CL-USER> (test-simpsons-integral 1000)
+;; 1/4
+;; NIL
 
 ; Exercise 1.30
 
