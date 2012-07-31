@@ -76,7 +76,7 @@
 ; Exercise 2.10
 
 (defun div-interval-2 (x y)
-  (if (= (upper-bound y) (lower-bound y))
+  (if (or (= (upper-bound y) 0) (= (lower-bound y) 0))
       (error "Cannot divide by an interval that spans 0.")
       (mul-interval x
                     (make-interval (/ 1.0 (upper-bound y))
@@ -142,3 +142,56 @@
 
 ; Exercise 2.12
 
+(defun make-center-width (c w)
+  (make-interval (- c w) (+ c w)))
+
+(defun center (i)
+  (/ (+ (lower-bound i) (upper-bound i)) 2))
+
+(defun width (i)
+  (/ (- (upper-bound i) (lower-bound i)) 2))
+
+;;
+
+(defun make-center-percent (c tolerance)
+  (let ((width (abs (* (/ tolerance 100.0) c))))
+    (make-center-width c width)))
+
+(defun percent (i)
+  (* 100.0 (/ (width i) (abs (center i)))))
+
+; Exercise 2.13
+; -------------
+
+; JOY OH JOY MORE MATHS
+
+; tolerance(x1, x2) =  0.5 (x2 - x1)  =  x2 - x1
+;                      -------------     ------
+;                      0.5 (x1 + x2)     x1 + x2  <- this is only ok assuming positive numbers
+
+; 
+;
+
+; a = [Ca*(1 - 0.5*Ta), Ca*(1 + 0.5*Ta)]
+; b = [Cb*(1 - 0.5*Ta), Ca*(1 + 0.5*Ta)]
+
+; a*b = [(Ca*(1 - 0.5 * Ta))*(Cb*(1-0.5 * Tb)), (Ca*(1 + 0.5 * Ta))*(Cb*(1+0.5 * Tb))
+
+; ... 
+
+
+; Exercise 2.14
+
+(defun para1 (r1 r2)
+  (div-interval (mul-interval r1 r2)
+                (add-interval r1 r2)))
+
+(defun para2 (r1 r2)
+  (let ((one (make-interval 1 1)))
+    (div-interval one
+                  (add-interval (div-interval one r1)
+                                (div-interval one r2)))))
+
+;;
+
+;; TODO ...
