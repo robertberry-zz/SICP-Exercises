@@ -14,8 +14,18 @@
 
 ; Exercise 1.35
 
-;; Gawly some mathy stuff
-;; TODO
+; x = (1 + sqrt(5)) / 2
+; x = 1 + 1 / x
+
+;  1 + sqrt(5)            2
+;  -----------  = 1 + -------------  (multiply all by 1 + sqrt(5) and 2)
+;       2              1 + sqrt(5)
+
+;
+; (1 + sqrt(5)) ^ 2 = 2 (1 + sqrt(5)) + 4
+
+; 6 + 2 sqrt(5) = 6 + 2 sqrt(5)
+; QED!
 
 (defparameter *golden-ratio* (fixed-point (lambda (x) (+ 1 (/ 1 x))) 1))
 
