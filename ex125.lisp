@@ -15,11 +15,8 @@
     206
     (gcd 40 (remainder 206 40)))
 
-(if (= 40 0)
-    206
-    (if (= (remainder 206 40) 0)
-        40
-        (gcd (remainder 206 40) (remainder 40 (remainder 206 40)))))
+(if (= (remainder 206 40) 40)
+    
 
 ; etc. it grows infinitely through substitution.
 
