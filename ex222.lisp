@@ -71,4 +71,22 @@
 
 ; Exercise 2.27
 
-;; Now it starts getting nasteh ... TODO
+(defun deep-reverse (x)
+  (labels ((iter (x acc)
+             (cond ((null x) acc)
+                   ((atom x) x)
+                   (t (iter (cdr x) (cons (iter (car x) '()) acc))))))
+    (iter x '())))
+
+;; Pretty proud of that one actually ... 
+
+; Exercise 2.28
+
+(defun fringe (x)
+  (cond ((null x) '())
+        ((atom x) (list x))
+        (t (append (fringe (car x)) (fringe (cdr x))))))
+
+; Exercise 2.29
+
+;; TODO
