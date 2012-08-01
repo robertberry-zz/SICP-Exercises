@@ -48,22 +48,7 @@
 
 ; b) 
 
-; Yes, the larger ones should always be first.
-
-; The left side of the addition is how many ways the amount can be counted
-; with the rest of the coins.
-
-; The right side of the addition is how many ways the amount can be counted
-; assuming the first coin has been used at least once (which is why it is
-; subtracted from the amount).
-
-; If a smaller coin is discarded in the left side of the addition before a
-; larger coin whose value can be composed of multiples of the smaller coin,
-; those multiples will not be counted ...... ??? Maybe I need to draw this
-; out, lol.
-
-; TODO!
-
+; No.
 
 ; Exercise 2.20
 
