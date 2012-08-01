@@ -198,6 +198,137 @@
                   (add-interval (div-interval one r1)
                                 (div-interval one r2)))))
 
-;;
 
-;; TODO ...
+(defparameter int-a (make-center-width 1000 5))
+(defparameter int-b (make-center-width 100 1))
+
+;; CL-USER> (para1 int-a int-b)
+;; (89.06419 . 92.78336)
+;; CL-USER> (para2 int-a int-b)
+;; (90.04114 . 91.77667)
+;; CL-USER> (percent (para1 int-a int-b))
+;; 2.0452127
+;; CL-USER> (percent (para2 int-a int-b))
+;; 0.95454603
+
+; loses accuracy with each division
+
+;; CL-USER> (percent int-a)
+;; 0.5
+;; CL-USER> (div-interval (make-interval 1 1) (div-interval (make-interval 1 1) int-a))
+;; (995.0 . 1004.99994)
+;; CL-USER> (percent (div-interval (make-interval 1 1) (div-interval (make-interval 1 1) int-a)))
+;; 0.49999696
+
+; that's not the reason, though!
+
+;; CL-USER> (div-interval int-a int-a)
+;; (0.9900498 . 1.0100503)
+
+;; So, if you divide the interval by itself, it does not equal the interval
+;; for 1 (1-1). Why is this? Because div-interval attempts to figure out the
+;; minimum and maximum possible values. The interval represents one resistor
+;; whose resistance is somewhere in that interval. But this resistance does
+;; not change!
+
+;; But in div interval, to calculate the lower resistance, it would divide the
+;; lower part of the interval by the higher. This would never actually happen
+;; ... and it means the data becomes noisy. I think.
+
+; Exercise 2.15
+
+;; I answered this above, lol.
+
+; Exercise 2.16
+
+;; The package would need to know when two intervals are the *same*
+;; interval. Equivalent intervals are not necessarily the same, however. You
+;; might have two resistors whose resistance is between 9-11 ohms, but that
+;; does not mean they are the same.
+
+;; This could be kept track via a third variable that identifies the variable
+;; in the same way that gensym works.
+
+;; You would then need to rewrite algebraic expressions so as to make sure
+;; that when two variables that are the same variable are being manipulated,
+;; it only ever performs the operation on the same bound (either the upper or
+;; lower).
+
+;; Ok ... so I'll try to verify this by actually attempting to write such a
+;; package.
+
+(let ((id 0))
+  (defun make-interval-id ()
+    (incf id)))
+  
+(defun make-interval-z (x y)
+  (list x y (make-interval-id)))
+
+(defun interval-id (x)
+  (caddr x))
+
+(defun same-interval (x y)
+  (= (interval-id x) (interval-id y)))
+
+;; This can remain as it is
+(defun add-interval-z (x y)
+  (make-interval-z (+ (lower-bound-z x) (lower-bound-z y))
+                   (+ (upper-bound-z x) (upper-bound-z y))))
+
+(defun lower-bound-z (a)
+  (car a))
+
+(defun upper-bound-z (a)
+  (cadr a))
+
+(defun mul-interval-z (x y)
+  (let ((p1 (* (lower-bound-z x) (lower-bound-z y)))
+        (p2 (* (lower-bound-z x) (upper-bound-z y)))
+        (p3 (* (upper-bound-z x) (lower-bound-z y)))
+        (p4 (* (upper-bound-z x) (upper-bound-z y))))
+    (if (same-interval x y)
+        (make-interval-z (min p1 p4)
+                         (max p1 p4))
+        (make-interval-z (min p1 p2 p3 p4)
+                         (max p1 p2 p3 p4)))))
+
+(defun div-interval-z (x y)
+  (if (same-interval x y)
+      (make-interval-z 1 1)
+      (mul-interval-z x
+                    (make-interval-z (/ 1.0 (upper-bound-z y))
+                                     (/ 1.0 (lower-bound-z y))))))
+
+
+(defun para1-z (r1 r2)
+  (div-interval-z (mul-interval-z r1 r2)
+                  (add-interval-z r1 r2)))
+
+(defun para2-z (r1 r2)
+  (let ((one (make-interval-z 1 1)))
+    (div-interval-z one
+                    (add-interval-z (div-interval-z one r1)
+                                    (div-interval-z one r2)))))
+
+;; CL-USER> (para1-z i j)
+
+;; (2.5 20.0 16)
+;; CL-USER> (para2-z i j)
+;; (5.0 10.0 24)
+
+;; OK so that completely did not work! Why?
+
+;; The answers are so different it looks like in one it's realized some
+;; resistors are the same and in the other it hasn't. Information is being
+;; lost at some point. (basically because 1/R1 should be considered the same
+;; as 1/R1, whereas at the moment that information is lost as a new ID is
+;; generated.)
+
+;; Would we be able to keep this information throughout? You'd have to
+;; remember the original IDs and the actions performed to create the new
+;; variables. Seems very complex ...
+
+;; Anyway, time to look up the answer as I'm probably way off.
+
+;; <- wow, I'm actually correct about this. As for whether it's doable, the
+;; answer doesn't say, but I'm on the right track (re identity) ... 
