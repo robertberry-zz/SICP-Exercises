@@ -22,10 +22,6 @@
 (define flipped-pairs
   (square-of-four identity flip-vert identity flip-vert))
 
-; fake def so Dr Racket doesn't complain
-(define (corner-split x y)
-  x)
-
 ;; Maybe this definition, however, is a bit confusing ... 
 (define (square-limit painter n)
   ((square-of-four flip-horiz
@@ -220,8 +216,26 @@
 
 ; b)
 
-;; TODO
+(define right-split (split beside below))
+
+(define (corner-split painter n)
+  (if (= n 0)
+      painter
+      (let ((up (up-split painter (- n 1)))
+            (right (right-split painter (- n 1))))
+        (let ((corner (corner-split painter (- n 1))))
+          (beside (below painter up)
+                  (below right corner))))))
 
 ; c)
 
-;; TODO
+;; I'm not sure exactly what is expected, as it seems like they already all
+;; look out from each corner of the square ...
+
+;; So I'll just do a random new pattern.
+
+(define (square-limit-2 painter n)
+  ((square-of-four flip-horiz
+                   flip-vert
+                   flip-horiz
+                   flip-vert) (corner-split painter n)))
