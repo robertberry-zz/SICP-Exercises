@@ -24,7 +24,7 @@
 (defun make-sum (a1 a2)
   (cond ((=numberp a1 0) a2)
         ((=numberp a2 0) a1)
-        ((and (numberp a1) (numberp a2)) (+ a2 a2))
+        ((and (numberp a1) (numberp a2)) (+ a1 a2))
         (t (list '+ a1 a2))))
 
 (defun =numberp (exp num)
@@ -112,4 +112,28 @@
 ; Exercise 2.58
 
 ; a)
+
+(defun addend (s)
+  (car s))
+
+(defun augend (s)
+  (caddr s))
+
+(defun multiplier (p)
+  (car p))
+
+(defun multiplicand (p)
+  (caddr p))
+
+(defun sum? (exp)
+  (and (listp exp) (eq (cadr exp) '+)))
+
+(defun product? (exp)
+  (and (listp exp) (eq (cadr exp) '*)))
+
+; b)
+
+;; Not given how 'deriv' is defined.
+
+;; i.e.. Is (3 * 4 + 4) a sum or a product? 
 
