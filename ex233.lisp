@@ -58,19 +58,20 @@
         ((< x (car set)) nil)
         (t (element-of-set? x (cdr set)))))
 
-(defun intersection-of-ordered-set? (set1 set2)
+(defun intersection-of-ordered-set (set1 set2)
   (if (or (null set1) (null set2))
       '()
       (let ((x1 (car set1))
             (x2 (car set2)))
         (cond ((= x1 x2)
-               (cons x1 (intersection-set (cdr set1)
-                                          (cdr set2))))
+               (cons x1 (intersection-of-ordered-set (cdr set1)
+                                                     (cdr set2))))
               ((< x1 x2)
-               (intersection-set (cdr set1) set2))
+               (intersection-of-ordered-set (cdr set1) set2))
               ((< x2 x1)
-               (intersection-set set1 (cdr set2)))))))
+               (intersection-of-ordered-set set1 (cdr set2)))))))
 
 ; Exercise 2.61
 
-;; TODO
+(defun adjoin-set (x set)
+  ())
