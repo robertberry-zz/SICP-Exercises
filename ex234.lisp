@@ -199,3 +199,58 @@
 
 ; Exercise 2.71
 
+;; n = 5
+
+;                  /  \
+;                16    (15)
+;                     /    \
+;                    8      (7)
+;                         /     \
+;                        4      (3)
+;                              /    \
+;                              1     2
+
+;; n = 10
+
+;
+;    /  \
+; 1024   (1023)
+;        /  \
+;      256   (255)
+;            /   \
+;          128   (127)
+;                /   \
+;               64    (63)
+;                     /   \
+;                   32     (31)
+;                          /  \
+;                        16    (15)
+;                             /    \
+;                            8      (7)
+;                                 /     \
+;                                4      (3)
+;                                      /    \
+;                                      1     2
+
+; The most frequent symbol is always at one of the first branches, so 1 bit.
+; The least frequent symbol is always one of the last two branches, so n - 1 bits.
+
+
+; Exercise 2.72
+
+; Assuming the tree is balanced, it takes O(log n) steps to traverse. At each
+; level of recursion, the algorithm must check whether the set in the left and
+; right branch contains the symbol, which takes O(n) steps in the worst case
+; scenario. n should roughly diminish by half with each level of recursion.
+
+; TODO figure out what this means as an answer ...
+
+; In the worst case scenario (the highly unbalanced tree of 2.71), the order
+; of growth is O(1) for the most frequent symbol, as it will always be in one
+; of the first nodes of the tree ... (Or will it be O(n) as it must still
+; traverse the set?)
+
+; The least frequent symbol will take roughly n levels of recursion. At each
+; level the sets to check are diminished only by 1 item, so it will be roughly
+; O(n!) amount of work.
+
