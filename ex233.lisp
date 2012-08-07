@@ -189,9 +189,7 @@
                                                      (make-tree 7 nil nil)
                                                      (make-tree 11 nil nil))))
 
-; b) No - a is slower because of the append operation, which is O(n). As for
-;    each layer n is halved, and there are log n layers, it will take O(n log
-;    n) roughly ... I think.
+; b) a is slower because of the append operation. I think both grow O(log n), however.
 
 ; Exercise 2.64
 
@@ -217,5 +215,45 @@
                 (cons (make-tree this-entry left-tree right-tree)
                       remaining-elts))))))))
 
-; a) oh god
+; a) Successively splits the 'elts' around a pivot element, which is roughly
+;    the centre of the list. This becomes the entry of a new sub-tree, the
+;    left and right subtrees of this being formed by recursively calling the same
+;    function on them.
 
+; b) The depth of recursion is log n. But for each level there are two recursive
+;    calls. ... I vaguely remember that this can be solved with the master method.
+
+;    TODO: look up master method and solve this
+
+;    I think, however, that it is n number of steps.
+
+
+; Exercise 2.65
+
+(defun union-tree-set (set1 set2)
+  (let* ((list1 (tree->list-2 set1))
+         (list2 (tree->list-2 set2))
+         (combined (union-ordered-set list1 list2)))
+    (list->tree combined)))
+
+; tree->list-2 is O(log n). union-ordered-set is O(n). The growth of the function
+; is still O(n).
+
+(defun intersection-tree-set (set1 set2)
+  (let* ((list1 (tree->list-2 set1))
+         (list2 (tree->list-2 set2))
+         (intersection (intersection-of-ordered-set list1 list2)))
+    (list->tree combined)))
+
+; same as above
+
+; Exercise 2.66
+
+(defun lookup (given-key set-of-records)
+  (if (null set-of-records)
+      nil
+      (let* ((record (entry set-of-records))
+             (record-key (key record)))
+        ((= given-key record-key) record)
+        ((> given-key record-key) (lookup given-key (right-branch set-of-records)))
+        ((< given-key record-key) (lookup given-key (left-branch set-of-records))))))
