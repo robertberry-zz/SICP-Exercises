@@ -27,7 +27,7 @@
 
 (defun apply-generic (op &rest args)
   (let* ((type-tags (mapcar #'type-tag args))
-         (proc (get-generic op type-tags)))
+         (proc (get-generic op type-tags t)))
     (if proc
         (apply proc (mapcar #'contents args))
         (if (and (= (length args) 2))
@@ -72,13 +72,15 @@
                    (apply proc (mapcar #'contents args))
                    (if (all-same-type type-tags)
                        nil
-                       (some #'iter (mapcar (lambda (coercions)
-                                              (mapcar #'funcall
-                                                      (coercions type-tags)
-                                                      args)) available-coercions)))))))
-    (or (iter args) (error "Unable to apply generic ~a for types ~a"
-                           op
-                           (mapcar #'type-tag args)))))
+                       (some #'iter
+                             (mapcar (lambda (coercions)
+                                       (mapcar #'funcall
+                                               coercions args))
+                                     (available-coercions type-tags))))))))
+    (or (iter args)
+        (error "Unable to apply generic ~a for types ~a"
+               op
+               (mapcar #'type-tag args)))))
 
 ;; This performs all coercions to single types. You can edit
 ;; 'available-coercions' to iterate through every possible combination of
@@ -97,19 +99,43 @@
 
 (defgen raise (x))
 
-(put-generic 'raise '(integer) (lambda (x)
+(put-generic 'raise '(lisp-number) (lambda (x)
                                (make-rational x 1)))
 
+(defun make-real (x)
+  (attach-tag 'real x))
+
 (put-generic 'raise '(rational) (lambda (x)
-                        (* 1.0 (/ (numer x) (denom x)))))
+                                  (make-real (* 1.0 (/ (numer x) (denom x))))))
 
 (put-generic 'raise '(real) (lambda (x)
-                    (make-from-real-imag x 0)))
+                    (make-complex-from-real-imag x 0)))
 
 ; Exercise 2.84
 
-;; TODO
+(defun const (x)
+  (lambda (y)
+    x))
 
+(defparameter *parent-class-table* (make-hash-table))
+
+(defun set-parent (cls parent)
+  (setf (gethash cls *parent-class-table*) parent))
+
+(defun get-parent (cls)
+  (gethash cls *parent-class-table* nil))
+
+(defun parents (cls)
+  (let ((parent (get-parent cls)))
+    (if (null parent)
+        '()
+        (cons parent (parents parent)))))
+
+(set-parent 'rational 'lisp-number)
+(set-parent 'real 'rational)
+(set-parent 'complex 'real)
+
+;; STILL TO DO ... 
 
 ; Exercise 2.85
 

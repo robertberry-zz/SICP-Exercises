@@ -5,12 +5,29 @@
 (defun get-generic-flist (generic)
   (gethash generic *generics-table*))
 
+(define-condition undefined-generic-error (error)
+  ((function-name
+    :initarg :name
+    :accessor function-name
+    :initform nil
+    :documentation "Name of the generic function")
+   (type-list
+    :initarg :types
+    :accessor types
+    :initform nil
+    :documentation "The types of the arguments passed to the function")))
+
+(defmethod print-object ((object undefined-generic-error) stream)
+  (format stream "No generic for ~a with types ~a"
+          (function-name object)
+          (types object)))
+
 (defun get-generic (generic type-list &optional no-error)
   (let* ((f-list (get-generic-flist generic))
          (f (find-if (lambda (x)
                      (equal type-list (car x))) f-list)))
     (if (and (null f) (not no-error))
-        (error "No generic for ~a with types ~a" generic type-list)
+        (error 'undefined-generic-error :name generic :types type-list)
         (cadr f))))
 
 (defun put-generic (generic type-list f)
