@@ -1,5 +1,14 @@
 ; Answers for 2-5-2
 
+(load "ex251.lisp")
+(load "coercions.lisp")
+
+(install-lisp-number-package)
+(install-rational-package)
+(install-complex-package)
+(install-rectangular-package)
+(install-polar-package)
+
 (defun lisp-number->complex (n)
   (make-complex-from-real-imag (contents n) 0))
 
@@ -18,7 +27,7 @@
 
 (defun apply-generic (op &rest args)
   (let* ((type-tags (mapcar #'type-tag args))
-         (proc (get op type-tags)))
+         (proc (get-generic op type-tags)))
     (if proc
         (apply proc (mapcar #'contents args))
         (if (and (= (length args) 2))
@@ -46,9 +55,9 @@
              (mapcar (lambda (coerce-from)
                        (if (eq coerce-from coerce-to)
                            #'identity
-                           (get-coercion coerce-from coerce-to)) types)))
+                           (get-coercion coerce-from coerce-to))) types)))
     (remove-if #'unable-to-coerce-all
-               (mapcar #'coercions-for-type (remove-duplicates types))))))
+               (mapcar #'coercions-for-type (remove-duplicates types)))))
 
 (defun all-same-type (type-tags)
   (let ((x (car type-tags)))
@@ -58,7 +67,7 @@
 (defun apply-generic (op &rest args)
   (labels ((iter (args)
              (let* ((type-tags (mapcar #'type-tag args))
-                    (proc (get op type-tags)))
+                    (proc (get-generic op type-tags)))
                (if proc
                    (apply proc (mapcar #'contents args))
                    (if (all-same-type type-tags)
@@ -85,13 +94,13 @@
 
 (defgen raise (x))
 
-(put 'raise 'integer (lambda (x)
-                       (make-rat x 1)))
+(put-generic 'raise '(integer) (lambda (x)
+                               (make-rational x 1)))
 
-(put 'raise 'rational (lambda (x)
+(put-generic 'raise '(rational) (lambda (x)
                         (* 1.0 (/ (numer x) (denom x)))))
 
-(put 'raise 'real (lambda (x)
+(put-generic 'raise '(real) (lambda (x)
                     (make-from-real-imag x 0)))
 
 ; Exercise 2.84
@@ -103,19 +112,21 @@
 
 (defgen project (x))
 
-(put 'project 'complex #'real-part)
+(put-generic 'project '(complex) #'real-part)
 
 (defun real-to-rational (x)
   "Performs a rough conversion between a real number and a rational one. (May
-  be inaccurate; is only being used for projection."
+  be inaccurate; is only being used for projection.)"
   (multiple-value-bind (whole fractional) (floor (abs x))
     (if (/= 0 fractional)
-        (make-rat (* (1+ (round (/ whole fractional))) (if (plusp x) 1 -1))
-                  (floor (/ 1 fractional)))
-        (make-rat x 1))))
+        (let ((inverse-fractional (round (/ 1 fractional))))
+          (make-rational (* (1+ (round (/ whole (/ 1 inverse-fractional))))
+                            (if (plusp x) 1 -1))
+                         inverse-fractional))
+        (make-rational x 1))))
 
-(put 'project 'real #'real-to-rational)
+(put-generic 'project '(real) #'real-to-rational)
 
-(put 'project 'rational #'numer)
+(put-generic 'project '(rational) #'numer)
 
 ;; TODO ... 
