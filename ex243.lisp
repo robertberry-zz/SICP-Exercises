@@ -1,14 +1,44 @@
 ; Answers for 2-4-3
 
-; NOTE: Much of this chapter is untested, as we have not yet been supplied
-; with the 'put and 'get operations. todo: return to this later to test.
+;; Had to define my own put and get functions. Why don't they give you these
+;; so you can test your code?
+
+(defparameter *generics-table* (make-hash-table))
+
+(defun get-generic-flist (generic)
+  (gethash generic *generics-table*))
+
+(defun get-generic (generic type-list &optional no-error)
+  (let* ((f-list (get-generic-flist generic))
+         (f (find-if (lambda (x)
+                     (equal type-list (car x))) f-list)))
+    (if (and (null f) (not no-error))
+        (error "No generic for ~a with types ~a" generic type-list)
+        (cadr f))))
+
+(defun put-generic (generic type-list f)
+  (if (get-generic generic type-list t)
+      (error "Generic already defined for types ~a" type-list)
+      (setf (gethash generic *generics-table*)
+            (cons (list type-list f) (gethash generic *generics-table* '())))))
 
 ; Exercise 2.73
+
+(defun number? (x)
+  (numberp x))
+
+(defun variable? (x)
+  (symbolp x))
+
+(defun same-variable? (x y)
+  (and (variable? x)
+       (variable? y)
+       (eq x y)))
 
 (defun deriv (exp var)
   (cond ((number? exp) 0)
         ((variable? exp) (if (same-variable? exp var) 1 0))
-        (t (funcall (get 'deriv (operator exp))
+        (t (funcall (get-generic 'deriv (operator exp))
                     (operands exp)
                     var))))
 
@@ -26,6 +56,34 @@
 
 ; b)
 
+(defun multiplier (exp)
+  (car exp))
+
+(defun multiplicand (exp)
+  (cadr exp))
+
+(defun addend (s)
+  (cadr s))
+
+(defun augend (s)
+  (caddr s))
+
+(defun =numberp (exp num)
+  (and (numberp exp) (= exp num)))
+
+(defun make-sum (a1 a2)
+  (cond ((=numberp a1 0) a2)
+        ((=numberp a2 0) a1)
+        ((and (numberp a1) (numberp a2)) (+ a1 a2))
+        (t (list '+ a1 a2))))
+
+(defun make-product (m1 m2)
+  (cond ((or (=numberp m1 0) (=numberp m2 0)) 0)
+        ((=numberp m1 1) m2)
+        ((=numberp m2 1) m1)
+        ((and (numberp m1) (numberp m2)) (* m1 m2))
+        (t (list '* m1 m2))))
+
 (defun install-basic-deriv-rules ()
   (labels ((deriv-sum (exp var)
              (make-sum (deriv (addend exp) var)
@@ -36,27 +94,37 @@
                             (deriv (multiplicand exp) var))
               (make-product (deriv (multiplier exp) var)
                             (multiplicand exp)))))
-    (put 'deriv '+ #'deriv-sum)
-    (put 'deriv '* #'deriv-product)))
+    (put-generic 'deriv '+ #'deriv-sum)
+    (put-generic 'deriv '* #'deriv-product)))
 
 ; c)
+
+(defun base (exp)
+  (car exp))
+
+(defun exponent (exp)
+  (cadr exp))
+
+(defun make-exponentiation (base exponent)
+  (cond ((= exponent 0) 1)
+        ((= exponent 1) base)
+        ((numberp base) (expt base exponent))
+        (t (list '** base exponent))))
 
 (defun install-extra-deriv-rules ()
   (labels ((deriv-exponentiation (exp var)
              (make-product
               (make-product
                (exponent exp)
-               (make-exponentiation (base exp) (1- (exopnent exp))))
+               (make-exponentiation (base exp) (1- (exponent exp))))
               (deriv (base exp) var))))
-    (put 'deriv '** #'deriv-exopnentiation)))
+    (put-generic 'deriv '** #'deriv-exponentiation)))
 
 ; d)
 
-; Weird question ... +, for example, is now being dispatched based on the type
-; of the arguments, so you would have to provide a 'deriv -typed argument to
-; it, which would assumedly ..
-
-; Seems like a dumb representation to me! D: todo: think more about this
+; You would need to override +, -, etc., to be a generic function call. They
+; would then need to have operations for what they originally did (operations
+; between numeric types), but then also a derivative function variation.
 
 
 ; Exercise 2.74
@@ -67,14 +135,14 @@
 ; a symbol.
 
 ; The division must then provide the function for extracting the record from
-; this file type, and install it with (put 'get-record 'file-type-here
+; this file type, and install it with (put-generic 'get-record 'file-type-here
 ; #'func-here)
 
 (defun personnel-file-type (personnel-file)
   (car personnel-file))
 
 (defun get-record (personnel-file employee-id)
-  (funcall (get 'get-record (personnel-file-type personnel-file))
+  (funcall (get-generic 'get-record (personnel-file-type personnel-file))
            personnel-file employee-id))
 
 
@@ -89,7 +157,7 @@
   (car record))
 
 (defun get-salary (record)
-  (funcall (get 'get-salary (record-type record)) record))
+  (funcall (get-generic 'get-salary (record-type record)) record))
 
 ; c)
 

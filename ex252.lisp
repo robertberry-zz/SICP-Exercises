@@ -39,4 +39,83 @@
 
 ; Exercise 2.82
 
+(defun available-coercions (types)
+  (labels ((unable-to-coerce-all (types)
+             (some #'null types))
+           (coercions-for-type (coerce-to)
+             (mapcar (lambda (coerce-from)
+                       (if (eq coerce-from coerce-to)
+                           #'identity
+                           (get-coercion coerce-from coerce-to)) types)))
+    (remove-if #'unable-to-coerce-all
+               (mapcar #'coercions-for-type (remove-duplicates types))))))
+
+(defun all-same-type (type-tags)
+  (let ((x (car type-tags)))
+    (every (lambda (y)
+             (eq x y)) (cdr type-tags))))
+
+(defun apply-generic (op &rest args)
+  (labels ((iter (args)
+             (let* ((type-tags (mapcar #'type-tag args))
+                    (proc (get op type-tags)))
+               (if proc
+                   (apply proc (mapcar #'contents args))
+                   (if (all-same-type type-tags)
+                       nil
+                       (some #'iter (mapcar #'funcall
+                                            (available-coercions type-tags)
+                                            args)))))))
+    (iter args)))
+
+;; This performs all coercions to single types. You can edit
+;; 'available-coercions' to iterate through every possible combination of
+;; coercions. (TODO: implement this)
+
+;; The strategy is not sufficiently general when there's a function for which
+;; there are suitable mixed-type operations that depend on ordering, e.g. a
+;; situation in which a version of the generic exists for (rational complex)
+;; but not for (complex rational).
+
+;; I can't think of any functions for which this is true at the moment,
+;; however. (TODO: think of some ... )
+
+
+; Exercise 2.83
+
+(defgen raise (x))
+
+(put 'raise 'integer (lambda (x)
+                       (make-rat x 1)))
+
+(put 'raise 'rational (lambda (x)
+                        (* 1.0 (/ (numer x) (denom x)))))
+
+(put 'raise 'real (lambda (x)
+                    (make-from-real-imag x 0)))
+
+; Exercise 2.84
+
+;; TODO
+
+
+; Exercise 2.85
+
+(defgen project (x))
+
+(put 'project 'complex #'real-part)
+
+(defun real-to-rational (x)
+  "Performs a rough conversion between a real number and a rational one. (May
+  be inaccurate; is only being used for projection."
+  (multiple-value-bind (whole fractional) (floor (abs x))
+    (if (/= 0 fractional)
+        (make-rat (* (1+ (round (/ whole fractional))) (if (plusp x) 1 -1))
+                  (floor (/ 1 fractional)))
+        (make-rat x 1))))
+
+(put 'project 'real #'real-to-rational)
+
+(put 'project 'rational #'numer)
+
 ;; TODO ... 

@@ -1,5 +1,42 @@
 ; Answers for 2-5-1
 
+(defparameter *generics-table* (make-hash-table))
+
+(defun get-generic-flist (generic)
+  (gethash generic *generics-table*))
+
+(defun get-generic (generic type-list &optional no-error)
+  (let* ((f-list (get-generic-flist generic))
+         (f (find-if (lambda (x)
+                     (equal type-list (car x))) f-list)))
+    (if (and (null f) (not no-error))
+        (error "No generic for ~a with types ~a" generic type-list)
+        (cadr f))))
+
+(defun put-generic (generic type-list f)
+  (if (get-generic generic type-list t)
+      (error "Generic ~a already defined for types ~a" generic type-list)
+      (setf (gethash generic *generics-table*)
+            (cons (list type-list f) (gethash generic *generics-table* '())))))
+
+(defun attach-tag (type-tag contents)
+  (cons type-tag contents))
+
+(defun type-tag (datum)
+  (if (listp datum)
+      (car datum)
+      (error "Untagged data ~a" datum)))
+
+(defun contents (datum)
+  (if (listp datum)
+      (cdr datum)
+      (error "Untagged data ~a" datum)))
+
+(defun apply-generic (name &rest arguments)
+  (let ((type-tags (mapcar #'type-tag arguments)))
+    (apply (get-generic name type-tags)
+           (mapcar #'contents arguments))))
+
 ; Far too lazy to repeatedly type out defuns ;D
 (defmacro defgen (name (&rest arguments))
   `(defun ,name (,@arguments)
@@ -19,43 +56,43 @@
   (labels ((tag (x)
              (attach-tag type x))
            (add-binary-op (op f)
-             (put op (list type type)
-                  (compose #'tag f)))
+             (put-generic op (list type type)
+                          (compose #'tag f)))
            (add-binary-ops (ops-list)
              (mapcar (lambda (args)
                        (add-binary-op (car args)
-                                      (cadr args))))
+                                      (cadr args)))
              ops-list))
            (add-unary-op (op f)
-             (put op type (compose #'tag f)))
+             (put-generic op (list type) (compose #'tag f)))
            (add-unary-ops (ops-list)
              (mapcar (lambda (args)
                        (add-unary-op (car args)
                                      (cadr args)))
                      ops-list)))
-  (prog nil
      (add-binary-ops binary-ops)
-     (add-unary-ops unary-ops)))
-
-(defun install-lisp-number-package ()
-  (prog nil
-     (install-operators 'lisp-number
-                        (list (list 'make #'identity))
-                        (list (list 'add #'+)
-                              (list 'sub #'-)
-                              (list 'mul #'*)
-                              (list 'div #'/)))
+     (add-unary-ops unary-ops)
      'done))
 
+(defun install-lisp-number-package ()
+  (install-operators 'lisp-number
+                     (list (list 'make #'identity))
+                     (list (list 'add #'+)
+                           (list 'sub #'-)
+                           (list 'mul #'*)
+                           (list 'div #'/))))
+
 (defun make-lisp-number (n)
-  (funcall (get 'make 'lisp-number) n))
+  (funcall (get-generic 'make 'lisp-number) n))
+
+(defun numer (x)
+  (car x))
+
+(defun denom (x)
+  (cdr x))
 
 (defun install-rational-package ()
-  (labels ((numer (x)
-             (car x))
-           (denom (x)
-             (cdr x))
-           (make-rat (n d)
+  (labels ((make-rat (n d)
              (let ((g (gcd n d)))
                (cons (/ n g) (/ d g))))
            (add-rat (x y)
@@ -81,13 +118,68 @@
     'done))
 
 (defun make-rational (n d)
-  (funcall (get 'make 'rational) n d))
+  (funcall (get-generic 'make '(rational)) n d))
+
+(defun square (x)
+  (* x x))
+
+(defgen real-part (z))
+(defgen imag-part (z))
+(defgen magnitude (z))
+(defgen angle (z))
+
+(defun install-rectangular-package ()
+  (labels ((real-part (z)
+             (car z))
+           (imag-part (z)
+             (cdr z))
+           (make-from-real-imag (x y)
+             (cons x y))
+           (magnitude (z)
+             (sqrt (+ (square (real-part z))
+                      (square (imag-part z)))))
+           (angle (z)
+             (atan (imag-part z) (real-part z)))
+           (make-from-mag-ang (r a)
+             (cons (* r (cos a)) (* r (sin a)))))
+    (install-operators 'rectangular
+                       (list (list 'make-from-real-imag #'make-from-real-imag
+                                   'make-from-mag-ang #'make-from-mag-ang))
+                       '())
+    (put-generic 'real-part '(rectangular) #'real-part)
+    (put-generic 'imag-part '(rectangular) #'imag-part)
+    (put-generic 'magnitude '(rectangular) #'magnitude)
+    (put-generic 'angle '(rectangular) #'angle)    
+    'done))
+
+(defun install-polar-package ()
+  (labels ((magnitude (z)
+             (car z))
+           (angle (z)
+             (cdr z))
+           (make-from-mag-ang (r a) (cons r a))
+           (real-part (z)
+             (* (magnitude z) (cos (angle z))))
+           (imag-part (z)
+             (* (magnitude z) (sin (angle z))))
+           (make-from-real-imag (x y)
+             (cons (sqrt (+ (square x) (square y)))
+                   (atan y x))))
+    (install-operators 'polar
+                       (list (list 'make-from-real-imag #'make-from-real-imag
+                                   'make-from-mag-ang #'make-from-mag-ang))
+                       '())
+    (put-generic 'real-part '(polar) #'real-part)
+    (put-generic 'imag-part '(polar) #'imag-part)
+    (put-generic 'magnitude '(polar) #'magnitude)
+    (put-generic 'angle '(polar) #'angle)
+    'done))
 
 (defun install-complex-package ()
   (labels ((make-from-real-imag (x y)
-             (funcall (get 'make-from-real-imag 'rectangular) x y))
+             (funcall (get-generic 'make-from-real-imag '(rectangular)) x y))
            (make-from-mag-ang (r a)
-             (funcall (get 'make-from-mag-ang 'polar) r a))
+             (funcall (get-generic 'make-from-mag-ang '(polar)) r a))
 
            (add-complex (z1 z2)
              (make-from-real-imag (+ (real-part z1) (real-part z2))
@@ -113,10 +205,10 @@
 ;; All the above could be made even more concise and clean with a macro ...!
 
 (defun make-complex-from-real-imag (x y)
-  (funcall (get 'make-from-real-imag 'complex) x y))
+  (funcall (get-generic 'make-from-real-imag '(complex)) x y))
 
 (defun make-complex-from-mag-ang (r a)
-  (funcall (get 'make-from-mag-ang 'complex) r a))
+  (funcall (get-generic 'make-from-mag-ang '(complex)) r a))
 
 
 ; Exercise 2.77
@@ -131,12 +223,12 @@
 (defun type-tag (x)
   (cond ((numberp x) 'lisp-number)
         ((listp x) (car x))
-        (t "Unrecognized type -- TYPE-TAG")))
+        (t (error "Unrecognized type ~a" x))))
 
 (defun contents (x)
   (cond ((numberp x) x)
         ((listp x) (cdr x))
-        (t "Untyped data -- CONTENTS")))
+        (t (error "Untyped data ~a" x))))
 
 (defun attach-tag (tag data)
   (if (eq tag 'lisp-number)
@@ -147,26 +239,26 @@
 
 (defgen equ? (x y))
 
-(put 'equ? '(lisp-number lisp-number) #'=)
+(put-generic 'equ? '(lisp-number lisp-number) #'=)
 
-(put 'equ? '(rational rational) (lambda (x y)
+(put-generic 'equ? '(rational rational) (lambda (x y)
                                   (and (= (numer x) (numer y))
                                        (= (denom x) (denom y)))))
 
-(put 'equ? '(complex complex) (lambda (x y)
+(put-generic 'equ? '(complex complex) (lambda (x y)
                                 (and (= (real-part x) (real-part y))
                                      (= (imag-part x) (imag-part y)))))
 
 ;; some extra ones for fun ;D
 
-(put 'equ? '(lisp-number rational) (lambda (x y)
+(put-generic 'equ? '(lisp-number rational) (lambda (x y)
                                      (= x (/ (numer y) (denom y)))))
 
-(put 'equ? '(lisp-number complex) (lambda (x y)
+(put-generic 'equ? '(lisp-number complex) (lambda (x y)
                                     (and (= (imag-part y) 0)
                                          (= (real-part y) x))))
 
-(put 'equ? '(rational complex) (lambda (x y)
+(put-generic 'equ? '(rational complex) (lambda (x y)
                                  (and (= (imag-part y) 0)
                                       (= (real-part y) (/ (numer x)
                                                           (denom x))))))
@@ -175,13 +267,12 @@
 
 (defgen =zero? (x))
 
-(put '=zero? '(lisp-number) 'zerop)
+(put-generic '=zero? '(lisp-number) 'zerop)
 
-(put '=zero? '(rational) (lambda (x)
+(put-generic '=zero? '(rational) (lambda (x)
                            (= (numer x) 0)))
 
-(put '=zero? '(complex) (lambda (x)
+(put-generic '=zero? '(complex) (lambda (x)
                           (and (= (real-part x) 0)
                                (= (imag-part x) 0))))
-
 
