@@ -67,15 +67,18 @@
 (defun apply-generic (op &rest args)
   (labels ((iter (args)
              (let* ((type-tags (mapcar #'type-tag args))
-                    (proc (get-generic op type-tags)))
+                    (proc (get-generic op type-tags t)))
                (if proc
                    (apply proc (mapcar #'contents args))
                    (if (all-same-type type-tags)
                        nil
-                       (some #'iter (mapcar #'funcall
-                                            (available-coercions type-tags)
-                                            args)))))))
-    (iter args)))
+                       (some #'iter (mapcar (lambda (coercions)
+                                              (mapcar #'funcall
+                                                      (coercions type-tags)
+                                                      args)) available-coercions)))))))
+    (or (iter args) (error "Unable to apply generic ~a for types ~a"
+                           op
+                           (mapcar #'type-tag args)))))
 
 ;; This performs all coercions to single types. You can edit
 ;; 'available-coercions' to iterate through every possible combination of
