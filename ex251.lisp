@@ -160,6 +160,10 @@
                              (list 'sub #'sub-complex)
                              (list 'mul #'mul-complex)
                              (list 'div #'div-complex)))
+    (put-generic 'real-part '(complex) #'real-part)
+    (put-generic 'imag-part '(complex) #'imag-part)
+    (put-generic 'angle '(complex) #'angle)
+    (put-generic 'magnitude '(complex) #'magnitude)
     'done))
 
 ;; All the above could be made even more concise and clean with a macro ...!

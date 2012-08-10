@@ -5,9 +5,9 @@
 
 (install-lisp-number-package)
 (install-rational-package)
-(install-complex-package)
-(install-rectangular-package)
-(install-polar-package)
+;(install-complex-package)      These packages are redefined below.
+;(install-rectangular-package)
+;(install-polar-package)
 
 (defun lisp-number->complex (n)
   (make-complex-from-real-imag (contents n) 0))
@@ -69,7 +69,7 @@
              (let* ((type-tags (mapcar #'type-tag args))
                     (proc (get-generic op type-tags t)))
                (if proc
-                   (apply proc (mapcar #'contents args))
+                   (list (apply proc (mapcar #'contents args)))
                    (if (all-same-type type-tags)
                        nil
                        (some #'iter
@@ -77,10 +77,15 @@
                                        (mapcar #'funcall
                                                coercions args))
                                      (available-coercions type-tags))))))))
-    (or (iter args)
-        (error "Unable to apply generic ~a for types ~a"
-               op
-               (mapcar #'type-tag args)))))
+    (let ((result (iter args)))
+      (if (not (null result))
+          (car result)
+          (error "Unable to apply generic ~a for types ~a"
+                 op
+                 (mapcar #'type-tag args))))))
+
+; I know in the above using the list to signal the iter worked is ugly - I
+; wrote the function unthinkingly and had to patch it. todo: fix this
 
 ;; This performs all coercions to single types. You can edit
 ;; 'available-coercions' to iterate through every possible combination of
@@ -131,17 +136,55 @@
         '()
         (cons parent (parents parent)))))
 
+(defun parent-of (a b)
+  (not (null (member a (parents b)))))
+
 (set-parent 'rational 'lisp-number)
 (set-parent 'real 'rational)
 (set-parent 'complex 'real)
 
-;; STILL TO DO ... 
+(defun lowest-type (type-list)
+  (car (sort type-list #'parent-of)))
+
+(defun apply-to-first (pred f seq)
+  "Maps f to the first element of seq that matches pred."
+  (if (null seq)
+      '()
+      (let ((x (car seq))
+            (xs (cdr seq)))
+        (if (funcall pred x)
+            (cons (funcall f x) xs)
+            (cons x (apply-to-first pred f xs))))))
+
+(defun can-raise (type)
+  "Whether the given type can be raised."
+  (generic-exists 'raise (list type)))
+
+(defun apply-generic (op &rest args)
+  (labels ((iter (args)
+             (let* ((type-tags (mapcar #'type-tag args))
+                    (proc (get-generic op type-tags t)))
+               (if proc
+                   (list (apply proc (mapcar #'contents args)))
+                   (let ((lowest (lowest-type type-tags)))
+                     (if (can-raise lowest)
+                         (iter (apply-to-first (lambda (x)
+                                                 (eq (type-tag x) lowest))
+                                               #'raise
+                                               args))
+                         nil))))))
+    (let ((result (iter args)))
+      (if (not (null result))
+          (car result)
+          (error "Unable to apply generic ~a for types ~a"
+                 op
+                 (mapcar #'type-tag args))))))
 
 ; Exercise 2.85
 
 (defgen project (x))
 
-(put-generic 'project '(complex) #'real-part)
+(put-generic 'project '(complex) (lambda (x) (make-real (real-part x))))
 
 (defun real-to-rational (x)
   "Performs a rough conversion between a real number and a rational one. (May
@@ -158,4 +201,169 @@
 
 (put-generic 'project '(rational) #'numer)
 
-;; TODO ... 
+(defun can-project (type)
+  (generic-exists 'project (list type)))
+
+(defun drop (x)
+  "Drops x's type as far as possible."
+  (let ((type-x (type-tag x)))
+    (if (can-project type-x)
+        (let ((project-x (project x)))
+          (if (equ? (raise project-x) x)
+              project-x
+              x))
+        x)))
+
+(defun highest-type (type-list)
+  (car (last (sort type-list #'parent-of))))
+
+(defun apply-generic (op &rest args)
+  (labels ((type-tags (args)
+             (mapcar #'type-tag args))
+           (get-proc (args)
+             (get-generic op (type-tags args) t))
+           (apply-proc (proc args)
+             (apply proc (mapcar #'contents args)))
+           (iter (args)
+             (let ((type-tags (type-tags args))
+                   (proc (get-proc args)))
+               (if proc
+                   (list (apply-proc proc args))
+                   (let ((lowest (lowest-type type-tags)))
+                     (if (can-raise lowest)
+                         (iter (apply-to-first (lambda (x)
+                                                 (eq (type-tag x) lowest))
+                                               #'raise
+                                               args))
+                         nil))))))
+    (let ((proc (get-proc args)))
+      (if proc
+          (apply-proc proc args) ; this is to stop drop infinitely recursing
+          (let ((result (iter (mapcar #'drop args))))
+            (if (not (null result))
+                (car result)
+                (error "Unable to apply generic ~a for types ~a"
+                       op
+                       (mapcar #'type-tag args))))))))
+
+; Unsure whether it wants apply-generic to always 'simplify' or only simplify
+; the arguments if a generic does not exist for their current types.
+
+; todo: write a version that always simplifies
+
+
+; Exercise 2.86
+
+; The generic operations that operate on parts of the complex number
+; (e.g. add) will need to be redefined so that they themselves use generic
+; operations on the parts.
+
+(defun install-rectangular-package ()
+  (labels ((real-part (z)
+             (car z))
+           (imag-part (z)
+             (cdr z))
+           (make-from-real-imag (x y)
+             (cons x y))
+           (magnitude (z)
+             (square-root (add (square (real-part z))
+                        (square (imag-part z)))))
+           (angle (z)
+             (atangent (imag-part z) (real-part z)))
+           (make-from-mag-ang (r a)
+             (cons (* r (cosine a)) (* r (sine a)))))
+    (install-operators 'rectangular
+                       (list (list 'make-from-real-imag #'make-from-real-imag
+                                   'make-from-mag-ang #'make-from-mag-ang))
+                       '())
+    (put-generic 'real-part '(rectangular) #'real-part)
+    (put-generic 'imag-part '(rectangular) #'imag-part)
+    (put-generic 'magnitude '(rectangular) #'magnitude)
+    (put-generic 'angle '(rectangular) #'angle)    
+    'done))
+
+(defun install-polar-package ()
+  (labels ((magnitude (z)
+             (car z))
+           (angle (z)
+             (cdr z))
+           (make-from-mag-ang (r a) (cons r a))
+           (real-part (z)
+             (mul (magnitude z) (cosine (angle z))))
+           (imag-part (z)
+             (mul (magnitude z) (sine (angle z))))
+           (make-from-real-imag (x y)
+             (cons (square-root (+ (square x) (square y)))
+                   (atangent y x))))
+    (install-operators 'polar
+                       (list (list 'make-from-real-imag #'make-from-real-imag
+                                   'make-from-mag-ang #'make-from-mag-ang))
+                       '())
+    (put-generic 'real-part '(polar) #'real-part)
+    (put-generic 'imag-part '(polar) #'imag-part)
+    (put-generic 'magnitude '(polar) #'magnitude)
+    (put-generic 'angle '(polar) #'angle)
+    'done))
+
+(defun install-complex-package ()
+  (labels ((make-from-real-imag (x y)
+             (funcall (get-generic 'make-from-real-imag '(rectangular)) x y))
+           (make-from-mag-ang (r a)
+             (funcall (get-generic 'make-from-mag-ang '(polar)) r a))
+
+           (add-complex (z1 z2)
+             (make-from-real-imag (add (real-part z1) (real-part z2))
+                                  (add (imag-part z1) (imag-part z2))))
+           (sub-complex (z1 z2)
+             (make-from-real-imag (sub (real-part z1) (real-part z2))
+                                  (sub (imag-part z1) (imag-part z2))))
+           (mul-complex (z1 z2)
+             (make-from-mag-ang (mul (magnitude z1) (magnitude z2))
+                                (add (angle z1) (angle z2))))
+           (div-complex (z1 z2)
+             (make-from-mag-ang (div (magnitude z1) (magnitude z2))
+                                (sub (angle z1) (angle z2)))))
+    (install-operators 'complex
+                       (list (list 'make-from-real-imag #'make-from-real-imag)
+                             (list 'make-from-mag-ang #'make-from-mag-ang))
+                       (list (list 'add #'add-complex)
+                             (list 'sub #'sub-complex)
+                             (list 'mul #'mul-complex)
+                             (list 'div #'div-complex)))
+    (put-generic 'real-part '(complex) #'real-part)
+    (put-generic 'imag-part '(complex) #'imag-part)
+    (put-generic 'angle '(complex) #'angle)
+    (put-generic 'magnitude '(complex) #'magnitude)
+    'done))
+
+(defgen square-root (x))
+
+(put-generic 'square-root '(lisp-number) #'sqrt)
+(put-generic 'square-root '(real) #'sqrt)
+
+(defgen atangent (x y))
+
+(put-generic 'atangent '(lisp-number lisp-number) #'atan)
+(put-generic 'atangent '(real real) #'atan)
+
+(defgen cosine (x))
+
+(put-generic 'cosine '(lisp-number) #'cos)
+(put-generic 'cosine '(real) #'cos)
+
+(defgen sine (x))
+
+(put-generic 'sine '(lisp-number) #'sin)
+(put-generic 'sine '(real) #'sin)
+
+(defgen square (x))
+
+(put-generic 'square '(lisp-number) (lambda (x) (* x x)))
+(put-generic 'square '(real) (lambda (x) (* x x)))
+
+;; This should actually be enough, due to the raising.
+
+
+(install-complex-package)
+(install-rectangular-package)
+(install-polar-package)

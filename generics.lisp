@@ -22,6 +22,10 @@
           (function-name object)
           (types object)))
 
+(defun generic-exists (generic type-list)
+  "Whether the given generic exists for the given list of types."
+  (not (null (get-generic generic type-list t))))
+
 (defun get-generic (generic type-list &optional no-error)
   (let* ((f-list (get-generic-flist generic))
          (f (find-if (lambda (x)
