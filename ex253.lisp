@@ -113,6 +113,9 @@
 
 (defun zero-termlist? (term-list)
   (every #'=zero? (mapcar #'coeff term-list)))
+; The above function breaks data hiding (through using mapcar). It could be
+; implemented using first-term and rest-terms to avoid this - or we could
+; define a generic iteration function, and build a new map function over it.
 
 (put-generic '=zero? '(polynomial) (lambda (p)
                                      (zero-termlist? (term-list p))))
@@ -124,9 +127,7 @@
 (defun sub-terms (l1 l2)
   (add-terms l1 (mapcar (lambda (x)
                           (make-term (order x) (negate (coeff x)))) l2)))
-; The above function breaks data hiding (through using mapcar). It could be
-; implemented using first-term and rest-terms to avoid this - or we could
-; define a generic iteration function, and build a new map function over it.
+; Again, mapcar ...
 
 (defun negate (x)
   (mul -1 x))
@@ -143,4 +144,55 @@
 
 
 ; Exercise 2.89
+
+(defun order-front (term-list)
+  "Order of the item at the front of the term-list. (This might not be the
+  'first' item, which is the first item whose coefficient is not zero.)"
+  (1- (length term-list)))
+
+(defun first-term-2 (term-list)
+  (if (=zero? (car term-list))
+      (first-term-2 (cdr term-list))
+      (make-term (order-front term-list)
+                 (car term-list))))
+
+(defun drop-while (f seq)
+  (if (funcall f (car seq))
+      (drop-while f (cdr seq))
+      seq))
+
+(defun rest-terms-2 (term-list)
+  (labels ((iter (terms)
+             (cond ((null terms) '())
+                   ((not (=zero? (car terms)))
+                    (drop-while #'=zero? (cdr terms)))
+                   (t (iter (cdr terms))))))
+    (iter term-list)))
+
+; The call to length would be pretty inefficient for a large list of terms (as
+; it would take O(n) time to get the first term). If expecting this kind of
+; data, should be implemented as a data structure that encodes its length when
+; it is created.
+
+(defun zeros (n)
+  "Create a list of zeros n elements long."
+  (if (= n 0)
+      '()
+      (cons 0 (zeros (1- n)))))
+
+(defun set-nth (seq n val)
+  (cond ((null seq) '())
+        ((= n 0) (cons val (cdr seq)))
+        (t (cons (car seq) (set-nth (cdr seq) (1- n) val)))))
+
+(defun adjoin-term-2 (term term-list)
+  (let ((order-first (order-front term-list))
+        (order-term (order term)))
+    (if (> order-term order-first)
+        (append (list order-term) (zeros (- order-term
+                                            order-first 1)) term-list)
+        (set-nth term-list (- order-first order-term) (coeff term)))))
+
+;
+; Exercise 2.90
 
