@@ -103,8 +103,8 @@
            (make-from-mag-ang (r a)
              (cons (* r (cos a)) (* r (sin a)))))
     (install-operators 'rectangular
-                       (list (list 'make-from-real-imag #'make-from-real-imag
-                                   'make-from-mag-ang #'make-from-mag-ang))
+                       (list (list 'make-from-real-imag #'make-from-real-imag)
+                             (list 'make-from-mag-ang #'make-from-mag-ang))
                        '())
     (put-generic 'real-part '(rectangular) #'real-part)
     (put-generic 'imag-part '(rectangular) #'imag-part)
@@ -126,8 +126,8 @@
              (cons (sqrt (+ (square x) (square y)))
                    (atan y x))))
     (install-operators 'polar
-                       (list (list 'make-from-real-imag #'make-from-real-imag
-                                   'make-from-mag-ang #'make-from-mag-ang))
+                       (list (list 'make-from-real-imag #'make-from-real-imag)
+                             (list 'make-from-mag-ang #'make-from-mag-ang))
                        '())
     (put-generic 'real-part '(polar) #'real-part)
     (put-generic 'imag-part '(polar) #'imag-part)
