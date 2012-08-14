@@ -36,7 +36,17 @@
                  (make-poly (poly-variable p1)
                             (mul-terms (term-list p1)
                                        (term-list p2)))
+                 (error "Polys not in same var ~a, ~a" p1 p2)))
+           (div-poly (p1 p2)
+             (if (same-variable? (poly-variable p1) (poly-variable p2))
+                 (let ((var (poly-variable p1))
+                       (result (div-terms (term-list p1)
+                                          (term-list p2))))
+                   (mapcar (lambda (term-list)
+                             (make-polynomial var term-list))
+                           result))
                  (error "Polys not in same var ~a, ~a" p1 p2))))
+    (put-generic 'div '(polynomial polynomial) #'div-poly)
     (install-operators 'polynomial
                        (list (list 'make #'make-poly))
                        (list (list 'add #'add-poly)
@@ -68,7 +78,7 @@
       (add-terms (mul-term-by-all-terms (first-term l1) l2)
                  (mul-terms (rest-terms l1) l2))))
 
-(defun mul-terms-by-all-terms (t1 l)
+(defun mul-term-by-all-terms (t1 l)
   (if (empty-termlist? l)
       (the-empty-termlist)
       (let ((t2 (first-term l)))
@@ -195,4 +205,66 @@
 
 ;
 ; Exercise 2.90
+
+;; Tried doing this one, made a massive mess, reverted.
+
+;; todo: retry!
+
+
+; Exercise 2.91
+
+;; First let me work through the division to make sure I understand it
+
+;         x^5 - 1
+;         ------- = x^3 ... 
+;         x^2 - 1
+
+;  x^3 * (x^2 - 1) = x^5 - x^3
+
+;         x^3 - 1
+;         -------  = x^3 + x ...
+;         x^2 - 1
+
+;  (x^3 + x)(x^2 - 1) = x^5 + x^3 - x - x^3 = x^5 - x
+
+;          x - 1
+;         -------  = x^3 + x, remainder: x - 1
+;         x^2 - 1
+
+; OK ... that makes sense.
+
+(defun div-terms (l1 l2)
+  (if (empty-termlist? l1)
+      (list (the-empty-termlist) (the-empty-termlist))
+      (let ((t1 (first-term l1))
+            (t2 (first-term l2)))
+        (if (> (order t2) (order t1))
+            (list (the-empty-termlist) l1)
+            (let* ((new-c (div (coeff t1) (coeff t2)))
+                   (new-o (- (order t1) (order t2)))
+                   (new-term (make-term new-o new-c)))
+              (let ((rest-of-result
+                     (div-terms (sub-terms l1
+                                           (mul-terms l2
+                                                      (adjoin-term
+                                                       new-term
+                                                       (the-empty-termlist)))) l2)
+                     ))
+                (list (cons new-term (car rest-of-result))
+                      (cadr rest-of-result))
+                ))))))
+
+; slightly brain-melting ...
+
+;; Added the poly function to the package def at the top
+
+;; CL-USER> (div (make-polynomial 'x '((5 1) (0 -1)))
+;;               (make-polynomial 'x '((2 1) (0 -1))))
+;; ((POLYNOMIAL X (3 1) (1 1)) (POLYNOMIAL X (1 1) (0 -1)))
+
+
+
+; Exercise 2.92
+
+;; FFS D:
 
