@@ -266,5 +266,55 @@
 
 ; Exercise 2.92
 
-;; FFS D:
+(defun symbol> (a b)
+  "Returns whether a symbol's name occurs alphabetically after another's."
+  (not (null (string> (symbol-name a)      ; string> returns 0 instead of t??
+                      (symbol-name b)))))
+
+(defun symbol< (a b)
+  (symbol> b a))
+
+
+; First let's make a function that turns this ... 
+
+;;   x^2 (y + 1)
+
+; ... into this ...
+
+;;   y (x^2)  +  1 (x^2)
+
+
+(defun singleton-termlist (t1)
+  (adjoin-term t1 (the-empty-termlist)))
+
+(defun polynomial? (x)
+  (and (listp x) (eq (car x) 'polynomial)))
+
+(defun expand (t1 var)
+  "Given a term of a given variable and a list of terms that are its
+   coefficient, expands."
+  (labels ((iter (tl2)
+             (if (null tl2)
+                 (the-empty-termlist)
+                 (let ((t2 (first-term tl2)))
+                   (adjoin-term (make-term (order t2)
+                                           (make-polynomial var
+                                                            (singleton-termlist
+                                                             (make-term (order t1)
+                                                                        1))))
+                                (iter (rest-terms tl2)))))))
+    (let* ((inner-poly (cdr (coeff t1)))
+           (inner-var (poly-variable inner-poly))
+           (terms (term-list inner-poly)))
+      (make-polynomial inner-var (iter terms)))))
+
+;; CL-USER> (defvar poly (make-term 2 (make-polynomial 'y (adjoin-term (make-term 1 1) (singleton-termlist (make-term 0 1))))))
+;; POLY
+;; CL-USER> poly
+;; (2 (POLYNOMIAL Y (1 1) (0 1)))
+;; CL-USER> (expand poly 'x)
+;; (POLYNOMIAL Y (1 (POLYNOMIAL X (2 1))) (0 (POLYNOMIAL X (2 1))))
+;; CL-USER> 
+
+;; OK ... that was the 'easy' bit ... 
 
