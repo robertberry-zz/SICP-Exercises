@@ -290,7 +290,7 @@
 (defun polynomial? (x)
   (and (listp x) (eq (car x) 'polynomial)))
 
-(defun expand (t1 var)
+(defun expand-term (t1 var)
   "Given a term of a given variable and a list of terms that are its
    coefficient, expands."
   (labels ((iter (tl2)
@@ -312,9 +312,22 @@
 ;; POLY
 ;; CL-USER> poly
 ;; (2 (POLYNOMIAL Y (1 1) (0 1)))
-;; CL-USER> (expand poly 'x)
+;; CL-USER> (expand-term poly 'x)
 ;; (POLYNOMIAL Y (1 (POLYNOMIAL X (2 1))) (0 (POLYNOMIAL X (2 1))))
-;; CL-USER> 
 
 ;; OK ... that was the 'easy' bit ... 
+
+; Now I want something that converts this ...
+
+;;    z^2 (y^3(x + 1))
+
+; Into this ...
+
+;;   z^2(x(y^3) + 1(y^3))
+
+; Then this ...
+
+;;   x(y^3(z^2)) + x(y^3(z^2))
+
+; Unfortunately I don't think the above function will help much with that.
 
