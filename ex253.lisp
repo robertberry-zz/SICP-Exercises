@@ -315,19 +315,208 @@
 ;; CL-USER> (expand-term poly 'x)
 ;; (POLYNOMIAL Y (1 (POLYNOMIAL X (2 1))) (0 (POLYNOMIAL X (2 1))))
 
-;; OK ... that was the 'easy' bit ... 
+;; OK ... thought about it & that doesn't help.
 
-; Now I want something that converts this ...
+; I want something that converts this ...
 
-;;    z^2 (y^3(x + 1))
+;;    z^2 (y^3(x + 1)) + 3z
 
 ; Into this ...
 
-;;   z^2(x(y^3) + 1(y^3))
+;;   z^2 * x * y^3 + z^2 * y^3 * x^0 + 3z
 
 ; Then this ...
 
-;;   x(y^3(z^2)) + x(y^3(z^2))
+;;   x(y^3(z^2)) + 1(y^3(z^2) + 1(3z))
 
-; Unfortunately I don't think the above function will help much with that.
+;; I'm going to use an intermediate form, which will be collections of variables to given
+;; powers and with given (non-polynomial) coefficients.
+
+(defun make-inter-var (var order coeff)
+  (list var order coeff))
+
+(defun order-inter-var (x)
+  (cadr x))
+
+(defun coeff-inter-var (x)
+  (caddr x))
+
+(defun variable-inter-var (x)
+  (car x))
+
+(defun join-inter-vars (v1 vl2)
+  (mapcar (lambda (v2s)
+            (cons v1 v2s)) vl2))
+
+(defgen expand (x))
+
+(put-generic 'expand '(polynomial) 
+             (lambda (poly)
+               (let ((var (poly-variable poly)))
+                 (labels ((iter (terms)
+                            (if (null terms)
+                                '()
+                                (let* ((t1 (first-term terms))
+                                       (t1-coeff (coeff t1))
+                                       (t1-order (order t1))
+                                       (rest (iter (rest-terms terms))))
+                                  (if (polynomial? t1-coeff)
+                                      (append (join-inter-vars (make-inter-var var t1-order 1)
+                                                               (expand t1-coeff))
+                                              rest)
+                                      (cons (list (make-inter-var var t1-order t1-coeff))
+                                            rest))))))
+                   (iter (term-list poly))))))
+
+(defparameter +no-expands+ '(lisp-number real rational complex))
+
+(mapcar (lambda (type)
+          ; todo - make it retag datatypes like 'rational'
+          (put-generic 'expand `(,type) #'list))
+        +no-expands+)
+  
+;; CL-USER> test-poly-2
+;; (POLYNOMIAL Z (2 (POLYNOMIAL Y (3 (POLYNOMIAL X (0 1) (1 1))))))
+;; CL-USER> (expand test-poly-2)
+;; (((Z 2 1) (Y 3 1) (X 0 1)) ((Z 2 1) (Y 3 1) (X 1 1)))
+
+;; CL-USER> test-poly-3
+;; (POLYNOMIAL Z (1 3) (2 (POLYNOMIAL Y (3 (POLYNOMIAL X (0 1) (1 1))))))
+;; CL-USER> (expand test-poly-3)
+;; (((Z 1 3)) ((Z 2 1) (Y 3 1) (X 0 1)) ((Z 2 1) (Y 3 1) (X 1 1)))
+
+; OK ... so that bit was (relatively) easy. The next bit is going to be horrible.
+
+(defun order-expansion (expansion)
+  "Order an expansion to the canonical order of the variables (i.e. alpha-order)."
+  (mapcar (lambda (vars)
+            (sort vars #'symbol< :key #'variable-inter-var))
+          expansion))
+
+;; CL-USER> (order-expansion (expand test-poly-3))
+
+;; (((Z 1 3)) ((X 0 1) (Y 3 1) (Z 2 1)) ((X 1 1) (Y 3 1) (Z 2 1)))
+
+; I REALLY need to make a less horrid way to construct these things for testing. In the
+; meantime saving this one here so I don't lose it!
+(defvar test-poly-3 (make-polynomial
+                     'z 
+                     (adjoin-term
+                      (make-term 1 3)
+                      (singleton-termlist 
+                       (make-term
+                        2
+                        (make-polynomial
+                         'y
+                         (singleton-termlist
+                          (make-term
+                           3
+                           (make-polynomial
+                            'x
+                            (adjoin-term
+                             (make-term 0 1) 
+                             (singleton-termlist
+                              (make-term 1 1))))))))))))
+
+; WORK IN PROGRESS
+
+; I need a function to normalize expansions, i.e. turn the following:
+
+;; (((Z 1 3)) ((X 0 1) (Y 3 1) (Z 2 1)) ((X 1 1) (Y 3 1) (Z 2 1)))
+
+; into this:
+
+;; (((X 0 1) (Y 0 1) (Z 1 3)) ((X 0 1) (Y 3 1) (Z 2 1)) ((X 1 1) (Y 3 1) (Z 2 1)))
+
+;; (although the first is necessary for the z ... what in the case of a solitary x?
+;; it should not really add all the extra zero order expansions ...- think about this
+
+(defun mappend (f seq)
+  "Applies f to seq, appending resultant lists."
+  (apply #'append (mapcar f seq)))
+
+(defun variable-list (expansion)
+  "Given an ordered expansion, returns a full list of variables involved."
+  (remove-duplicates (mappend (lambda (var-list)
+                                (mapcar #'variable-inter-var var-list))
+                              expansion)))
+
+(defun normalize-expansion (expansion)
+  (let ((vars (variable-list expansion)))
+    (labels ((normalize (var-list)
+               (labels ((iter (var-list var-names)
+                          (let ((var (car var-list))
+                                (var-name (car var-names)))
+                            (cond ((null var-list) '())
+                                  ((null var-names) (error "Ran out of variable names!"))
+                                  ((eq (variable-inter-var var) var-name)
+                                   (cons var (iter (cdr var-list) (cdr var-names))))
+                                  (t (cons (make-inter-var var-name 0 1)
+                                           (iter var-list (cdr var-names))))))))
+                 (iter var-list vars))))
+      (mapcar #'normalize expansion))))
+
+;; CL-USER> (normalize-expansion (order-expansion (expand test-poly-3)))
+
+;; (((X 0 1) (Y 0 1) (Z 1 3)) ((X 0 1) (Y 3 1) (Z 2 1)) ((X 1 1) (Y 3 1) (Z 2 1)))
+
+(defun canonical-poly (poly)
+  (labels (;; Really ugly function. I think the problem is I chose a bad
+           ;; representation for the intermediate variable groups. Only one of
+           ;; the variables in any given group is ever going to have a
+           ;; coefficient set due to the way we have implemented polynomials,
+           ;; so in the majority of cases the polynomial is just 1. Would've
+           ;; been better represented by lists inside lists, but then we're
+           ;; just getting back to the original polynomial representation,
+           ;; from which I should perhaps not have veered.
+           (reconstruct-poly (vars)
+             (if (null vars)
+                 (error "Empty varlist.")
+                 (let ((v (car vars))
+                       (vs (cdr vars)))
+                   (make-polynomial (variable-inter-var v)
+                                    (singleton-termlist
+                                     (make-term (order-inter-var v)
+                                                (if (null vs)
+                                                    (coeff-inter-var v)
+                                                    (reconstruct-poly vs))))))))
+           (merge-polys (polys)
+             (reduce #'add (cdr polys) :initial-value (car polys))))
+    (merge-polys (mapcar #'reconstruct-poly
+                         (normalize-expansion (order-expansion (expand poly)))))))
+
+; CL-USER> (canonical-poly test-poly-3)
+
+; (POLYNOMIAL X (1 (POLYNOMIAL Y (3 (POLYNOMIAL Z (2 1)))))
+; (0 (POLYNOMIAL Y (3 (POLYNOMIAL Z (2 1))) (0 (POLYNOMIAL Z (1 3))))))
+
+
+;; ffs, testing this is horrible 
+
+(defun print-poly (poly)
+  "Very crappy print poly function to help me test. todo: make this better"
+  (let* ((poly (cdr poly))
+         (var (poly-variable poly)))
+    (labels ((print-term (term)
+               (let ((c (coeff term))
+                     (o (order term)))
+                 (if (and (not (polynomial? c))
+                          (not (and (numberp c)
+                                    (= c 1))))
+                   (princ c))
+                 (if (= o 1)
+                     (princ var)
+                     (if (= o 0)
+                         (princ 1)
+                         (format t "~a^~a" var o)))
+                 (if (polynomial? c)
+                     (prog nil
+                        (princ "(")
+                        (print-poly c)
+                        (princ ")")))
+                 (format t " + "))))
+      (mapcar #'print-term (term-list poly)))))
+
+;; anyway, the long and short of it is canonical poly works. you can change sub-poly, etc.
+;; to invoke it on their arguments before adding, subtracting, etc.
 
