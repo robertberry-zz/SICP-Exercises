@@ -4,7 +4,7 @@
 (load "coercions.lisp")
 
 (install-lisp-number-package)
-(install-rational-package)
+;(install-rational-package) ;< turning this off, redefining in ex253
 ;(install-complex-package)      These packages are redefined below.
 ;(install-rectangular-package)
 ;(install-polar-package)

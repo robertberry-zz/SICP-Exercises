@@ -520,3 +520,236 @@
 ;; anyway, the long and short of it is canonical poly works. you can change sub-poly, etc.
 ;; to invoke it on their arguments before adding, subtracting, etc.
 
+
+; Exercise 2.93
+
+(defun install-rational-package ()
+  (labels ((make-rat (n d)
+             (let ((reduced (reduce-for-rat n d)))
+               (cons (car reduced) (cadr reduced))))
+           (add-rat (x y)
+             (make-rat (add (mul (numer x) (denom y))
+                            (mul (numer y) (denom x)))
+                       (mul (denom x) (denom y))))
+           (sub-rat (x y)
+             (make-rat (sub (mul (numer x) (denom y))
+                            (mul (numer y) (denom x)))
+                       (mul (denom x) (denom y))))
+           (mul-rat (x y)
+             (make-rat (mul (numer x) (numer y))
+                       (mul (denom x) (denom y))))
+           (div-rat (x y)
+             (make-rat (mul (numer x) (denom y))
+                       (mul (denom x) (numer y)))))
+    (install-operators 'rational
+                       (list (list 'make #'make-rat))
+                       (list (list 'add #'add-rat)
+                             (list 'sub #'sub-rat)
+                             (list 'mul #'mul-rat)
+                             (list 'div #'div-rat)))
+    'done))
+
+(install-rational-package)
+
+(defvar p1 (make-polynomial 'x '((2 1) (0 1))))
+(defvar p2 (make-polynomial 'x '((3 1) (0 1))))
+(defvar rf (make-rational p1 p2))
+
+;; CL-USER> rf
+;; (RATIONAL (POLYNOMIAL X (2 1) (0 1)) POLYNOMIAL X (3 1) (0 1))
+
+(defun gcd-terms (a b)
+  (if (empty-termlist? b)
+      a
+      (gcd-terms b (remainder-terms a b))))
+
+; Exercise 2.94
+
+(defun remainder-terms (a b)
+  (cadr (div-terms a b)))
+
+(defun gcd-poly (p1 p2)
+  (labels ((variable? (x)
+             (symbolp x))
+           (same-variable? (x y)
+             (and (variable? x) (variable? y) (eq x y))))
+    (if (same-variable? (poly-variable p1) (poly-variable p2))
+        (make-polynomial (poly-variable p1) (gcd-terms (term-list p1)
+                                                       (term-list p2)))
+        (error "Polys not in same var: ~a, ~a" (poly-variable p1) (poly-variable p2)))))
+
+(defgen greatest-common-divisor (a b))
+
+(put-generic 'greatest-common-divisor '(polynomial polynomial) #'gcd-poly)
+(put-generic 'greatest-common-divisor '(lisp-number lisp-number) #'gcd)
+(put-generic 'greatest-common-divisor '(real real) #'gcd)
+
+(defvar p3 (make-polynomial 'x '((4 1) (3 -1) (2 -2) (1 2))))
+(defvar p4 (make-polynomial 'x '((3 1) (1 -1))))
+
+
+;; CL-USER> (greatest-common-divisor p3 p4)
+
+;; (POLYNOMIAL X (2 -1) (1 1))
+
+; p3:      x^4 - x^3 - 2x^2 + 2x
+; p4:      x^3 - x
+; gcd:     -x^2 + x
+
+;; factorise ...
+
+; p3:  (-x^2 + x)(-x^2 + 2)
+
+; p4:  (-x^2 + x)(-1 - x)
+
+
+; Exercise 2.95
+
+(defvar p5 (make-polynomial 'x '((2 1) (1 -2) (0 1))))
+(defvar p6 (make-polynomial 'x '((2 11) (0 7))))
+(defvar p7 (make-polynomial 'x '((1 13) (0 5))))
+
+(defvar q1 (mul p5 p6))
+(defvar q2 (mul p5 p7))
+
+;; CL-USER> q1
+;; (POLYNOMIAL X (4 11) (3 -22) (2 18) (1 -14) (0 7))
+;; CL-USER> q2
+;; (POLYNOMIAL X (3 13) (2 -21) (1 3) (0 5))
+;; CL-USER> (greatest-common-divisor q1 q2)
+;; (POLYNOMIAL X (2 1458/169) (1 -2916/169) (0 1458/169))
+
+;; CL-USER> (trace gcd-terms)
+;; (GCD-TERMS)
+;; CL-USER> (greatest-common-divisor q1 q2)
+;;   0: (GCD-TERMS ((4 11) (3 -22) (2 18) (1 -14) (0 7))
+;;                 ((3 13) (2 -21) (1 3) (0 5)))
+;;     1: (GCD-TERMS ((3 13) (2 -21) (1 3) (0 5))
+;;                   ((2 1458/169) (1 -2916/169) (0 1458/169)))
+;;       2: (GCD-TERMS ((2 1458/169) (1 -2916/169) (0 1458/169)) NIL)
+;;       2: GCD-TERMS returned ((2 1458/169) (1 -2916/169) (0 1458/169))
+;;     1: GCD-TERMS returned ((2 1458/169) (1 -2916/169) (0 1458/169))
+;;   0: GCD-TERMS returned ((2 1458/169) (1 -2916/169) (0 1458/169))
+;; (POLYNOMIAL X (2 1458/169) (1 -2916/169) (0 1458/169))
+
+;; It's because div-terms divides the coefficients, producing fractions.
+
+
+; Exercise 2.96
+
+; a)
+
+(defun pseudoremainder-terms (a b)
+  (cadr (pseudodiv-terms a b)))
+
+(defun mul-terms-by-const (termlist c)
+  (mapcar (lambda (term)
+            (make-term (order term)
+                       (* c (coeff term))))
+          termlist))
+
+(defun pseudodiv-terms (p q)
+  (let* ((q1 (first-term q))
+         (p1 (first-term p))
+         (o1 (order p1))
+         (o2 (order q1))
+         (c (coeff q1))
+         (integerizing-factor (expt c (+ 1 o1 (- o2)))))
+    (div-terms (mul-terms-by-const p integerizing-factor) q)))
+
+(defun gcd-terms (a b)
+  (if (empty-termlist? b)
+      a
+      (gcd-terms b (pseudoremainder-terms a b))))
+
+;; CL-USER> (greatest-common-divisor q1 q2)
+
+;; (POLYNOMIAL X (2 1458) (1 -2916) (0 1458))
+
+
+; b)
+
+(defun gcd-coeffs (termlist)
+  (let ((coeffs (mapcar #'coeff termlist)))
+    (reduce #'gcd (cdr coeffs) :initial-value (car coeffs))))
+
+(defun div-terms-by-const (termlist c)
+  (mapcar (lambda (term)
+            (make-term (order term)
+                       (/ (coeff term) c)))
+          termlist))
+
+(defun gcd-terms (a b)
+  (if (empty-termlist? b)
+      a
+      (let ((remainder (pseudoremainder-terms a b)))
+        (gcd-terms b (div-terms-by-const remainder (gcd-coeffs remainder))))))
+
+
+;; CL-USER> (greatest-common-divisor q1 q2)
+
+;; (POLYNOMIAL X (2 1) (1 -2) (0 1))
+
+
+; Exercise 2.97
+
+(defun quotient-terms (t1 t2)
+  (car (div-terms t1 t2)))
+
+(defun reduce-terms (n d)
+  (let* ((gcd (gcd-terms n d))
+         (c (coeff (first-term gcd)))
+         (o1 (max (order (first-term n)) (order (first-term d))))
+         (o2 (order (first-term gcd)))
+         (integerizing-factor (expt c (+ 1 o1 (- o2))))
+         (nn (quotient-terms (mul-terms-by-const n integerizing-factor) gcd))
+         (dd (quotient-terms (mul-terms-by-const d integerizing-factor) gcd))
+         (gcd-c (gcd (gcd-coeffs nn) (gcd-coeffs dd))))
+    (list (div-terms-by-const nn gcd-c)
+          (div-terms-by-const dd gcd-c))))
+
+(defun reduce-polys (n d)
+  (labels ((variable? (x)
+             (symbolp x))
+           (same-variable? (x y)
+             (and (variable? x) (variable? y) (eq x y))))
+  (if (same-variable? (poly-variable n) (poly-variable d))
+      (let* ((result (reduce-terms (term-list n)
+                                   (term-list d)))
+             (tl1 (car result))
+             (tl2 (cadr result))
+             (var (poly-variable n)))
+        (list (make-polynomial var tl1)
+              (make-polynomial var tl2)))
+      (error "numerator and denominator are not of same variable ~a, ~a" n d))))
+
+;; CL-USER> (reduce-polys (cdr q1) (cdr q2))
+
+;; ((POLYNOMIAL X (2 11) (0 7)) (POLYNOMIAL X (1 13) (0 5)))
+
+
+; Exercise 2.97
+
+(defun reduce-integers (n d)
+  (let ((g (gcd n d)))
+    (list (/ n g) (/ d g))))
+
+(defgen reduce-for-rat (n d))
+
+(put-generic 'reduce-for-rat '(polynomial polynomial) #'reduce-polys)
+(put-generic 'reduce-for-rat '(lisp-number lisp-number) #'reduce-integers)
+
+(defvar poly1 (make-polynomial 'x '((1 1) (0 1))))
+(defvar poly2 (make-polynomial 'x '((3 1) (0 -1))))
+(defvar poly3 (make-polynomial 'x '((1 1))))
+(defvar poly4 (make-polynomial 'x '((2 1) (0 -1))))
+
+(defvar rf1 (make-rational poly1 poly2))
+(defvar rf2 (make-rational poly3 poly4))
+
+;; CL-USER> (add rf1 rf2)
+;; (RATIONAL (POLYNOMIAL X (3 1) (2 2) (1 3) (0 1)) POLYNOMIAL X (4 1) (3 1)
+;;           (1 -1) (0 -1))
+
+
+;; hehehe!
