@@ -1,0 +1,56 @@
+Answers for 3-2-4
+-----------------
+
+Exercise 3.11
+=============
+
+             +------------------------------------------------------------------+
+ global  --> | make-account: ...
+ env         | acc: --+
+             +-------|----------------------------------------------------------+
+                     v                ^
+                 .--- ---.            |
+                 | 0 | 0-+------------+
+                 `-|-^---'
+                   |
+                   v
+            parameters: balance
+            body: (define (withdraw amount) ...)
+                  (define (deposit amount) ... )
+                  (define (dispatch m) ...)
+                  dispatch
+
+
+---------------------------------------------------+ 
+                                                   |
+                                                   | <--  global env
+----------------------^----------------------------+                
+                      |                                             
+         +------------+------------+         (acc 'deposit)         
+   E1 -->| balance: 50             |   +-------------------+        
+         | withdraw                |<--| m: deposit        |  <-- E2
+         | deposit                 |   +-------------------+        
+         | dispatch                |                                
+         +----|--------------------+         ((...) 40)             
+              |     ^          ^       +--------------------+       
+              |     |          +-------| amount: 40         | <-- E3
+              v     |          |       +--------------------+       
+          .---.---. |          |                            
+          | 0 | 0-+-+          |             (acc 'withdraw)
+          `-|-^---'            |       +--------------------+ 
+            v                  +-------| m: withdraw        | <-- E4
+      parameters: m            |       +--------------------+ 
+      body: ...                |                            
+                               |             ((...) 60)     
+                               |       +--------------------+
+                               +-------| amount: 60         | <-- E5
+                                       +--------------------+
+
+The local state for acc is kept by the 'dispatch' procedure, as created in
+E1. Its own environment is E1, which contains the created 'withdraw' and
+'deposit' procedures, which in turn bind their environment to E1, which
+contains the 'balance' variable.
+
+The accounts would be kept separate through a new environment like E1 being
+created for acc2. The only shared part of the environment is the global
+environment.
