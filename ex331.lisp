@@ -208,7 +208,8 @@
 ; Exercise 3.16
 
 (defun count-pairs (x)
-  (if (not (list x))
+  (if (or (not (listp x))
+          (null x))
       0
       (+ (count-pairs (car x))
          (count-pairs (cdr x))
@@ -220,6 +221,9 @@
 ;   -->|   | *-+-->|   | *-+-->|   | / |
 ;      +---+---+   +---+---+   +---+---+
 ;
+
+(defparameter count-3 '(a b c))
+
 ; 4:
 ;
 ;      +---+---+   +---+---+   +---+---+
@@ -228,6 +232,12 @@
 ;                    |           ^
 ;                    |           |
 ;                    +-----------+
+;
+
+(defparameter count-4 '(a b c))
+(setf (cadr count-4)
+      (cddr count-4))
+
 ;
 ; 7:
 ;
@@ -240,6 +250,13 @@
 ;                    |           ^
 ;                    |           |
 ;                    +-----------+
+
+(defparameter count-7 '(a b c))
+(setf (cadr count-7)
+      (cddr count-7))
+(setf (car count-7)
+      (cdr count-7))
+
 ;
 ; never:
 ;
@@ -249,6 +266,54 @@
 ;   -->|   | *-+-->|   | *-+-->|   | * |
 ;      +---+---+   +---+---+   +---+---+
 
+(defparameter count-infinity '(a b c))
+(setf (cdr (last-pair count-infinity))
+      count-infinity)
 
 ; Exercise 3.17
 
+(defun make-set ()
+  '())
+
+(defun add-to-set (x set)
+  (cons x set))
+
+(defun element-of-set (x set)
+  (not (null (find x set :test #'eq))))
+
+; Let's make a functional version ... 
+(defun count-distinct-pairs (x)
+  (labels ((iter (seq seen)
+             (if (or (not (listp seq))
+                     (null seq)
+                     (element-of-set seq seen))
+                 0
+                 (let ((seen (add-to-set seq seen)))
+                   (+ 1
+                      (iter (car seq) seen)
+                      (iter (cdr seq) seen))))))
+    (iter x (make-set))))
+
+; Exercise 3.18
+
+(defun contains-cycle (seq)
+  (labels ((iter (seq seen)
+             (cond ((null seq) nil)
+                   ((element-of-set seq seen) t)
+                   (t (iter (cdr seq) (add-to-set seq seen))))))
+    (iter seq (make-set))))
+
+; Exercise 3.19
+
+(defun contains-cycle-2 (front)
+  (labels ((iter (seq)
+             (cond ((null seq) nil)
+                   ((eq seq front) t)
+                   (t (iter (cdr seq))))))
+    (iter (cdr front))))
+
+; Exercise 3.20
+
+;; TODO ...
+
+                 
