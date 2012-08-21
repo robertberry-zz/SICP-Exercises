@@ -157,7 +157,123 @@
                  (t (error "Unknown operation -- TABLE ~a" m)))))
       #'dispatch)))
 
+(defun insert-table! (table keys value)
+  (funcall (funcall table 'insert!) keys value))
+
+(defun lookup-table (table keys)
+  (funcall (funcall table 'lookup) keys))
+
 ; Exercise 3.26
 
-;; todo ...
+;; Even better, I'll implement it.
 
+(defun symbol> (a b)
+  (not (null (string> (symbol-name a)
+                      (symbol-name b)))))
+
+(defun make-tree (&optional (after? #'symbol>) (key #'identity) (equal? #'equal))
+  (let ((tree '()))
+    (labels ((make-node (value left right)
+               (list value left right))
+             (left (node)
+               (cadr node))
+             (right (node)
+               (caddr node))
+             (set-left! (node tree)
+               (setf (cadr node) tree))
+             (set-right! (node tree)
+               (setf (caddr node) tree))
+             (value (node)
+               (car node))
+             (insert! (x)
+               (let ((new-node (make-node x '() '())))
+                 (labels ((iter (node)
+                            (if (funcall after? (funcall key x) (funcall key (value node)))
+                                (if (null (right node))
+                                    (set-right! node new-node)
+                                    (iter (right node)))
+                                (if (null (left node))
+                                    (set-left! node new-node)
+                                    (iter (left node))))))
+                   (if (null tree)
+                       (setf tree new-node)
+                       (iter tree)))))
+             (lookup (x)
+               (labels ((iter (node)
+                          (if (null node)
+                              nil
+                              (let ((node-val (value node)))
+                                (if (funcall equal? x (funcall key node-val))
+                                    node-val
+                                    (iter (if (funcall after? x (funcall key node-val))
+                                              (right node)
+                                              (left node))))))))
+                 (iter tree)))
+             (dispatch (m)
+               (case m
+                 (insert! #'insert!)
+                 (lookup #'lookup)
+                 (t (error "Bad message for tree ~a" m)))))
+      #'dispatch)))
+
+(defun tree-insert! (tree a)
+  (funcall (funcall tree 'insert!) a))
+
+(defun tree-lookup (tree a)
+  (funcall (funcall tree 'lookup) a))
+
+(defun make-table-4 (&optional (same-key? #'equal) (key-after? #'symbol>))
+  (let ((local-table (cons '*table* (make-tree key-after? #'car same-key?))))
+    (labels ((my-assoc (key records)
+               (tree-lookup records key))
+             (lookup (keys)
+               (labels ((iter (table keys)
+                          (cond ((null table) nil)
+                                ((null keys) (cdr table))
+                                (t (iter (my-assoc (car keys) (cdr table))
+                                         (cdr keys))))))
+                 (iter local-table keys)))
+             (insert! (keys value)
+               (labels ((iter (keys table)
+                          (if (null keys)
+                              (set-cdr! table value)
+                              (let ((subtable (my-assoc (car keys) (cdr table))))
+                                (if subtable
+                                    (iter (cdr keys) subtable)
+                                    (append-item! keys value table)))))
+                        (append-item! (keys value table)
+                          (if (null keys)
+                              (set-cdr! table value)
+                              (let ((new-record (list (car keys)))
+                                    (new-subtree (make-tree key-after? #'car same-key?)))
+                                (tree-insert! new-subtree new-record)
+                                (set-cdr! table new-subtree)
+                                (append-item! (cdr keys) value new-record)))))
+                 (iter keys local-table)))
+             (dispatch (m)
+               (case m
+                 (lookup #'lookup)
+                 (insert! #'insert!)
+                 (t (error "Unknown operation -- TABLE ~a" m)))))
+      #'dispatch)))
+
+; Exercise 3.27
+
+; a)
+
+;; ffs environment diagram!!!
+
+; TODO
+
+
+; b)
+
+; Because it does not have to recurse all the way down the structure. If a
+; value has previously been computed it will be immediately returned, whereas
+; in the original recursive procedure, the two recursive calls redo a lot of
+; work.
+
+; c)
+
+; No, because fib's recursions refer to the 'fib' procedure itself, so it would
+; only use the memoized procedure on the first level of recursion.
