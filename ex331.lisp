@@ -312,6 +312,27 @@
                    (t (iter (cdr seq))))))
     (iter (cdr front))))
 
+; Have since realized this doesn't work for all cases, as a cycle could occur
+; without containing the first element of the list.
+
+; You could do it like this,
+
+(defun contains-cycle-3 (front)
+  (labels ((position-of (x seq &optional (acc 0))
+             (if (eq x seq)
+                 acc
+                 (position-of x (cdr seq) (1+ acc))))
+           (iter (seq n)
+             (cond ((null seq) nil)
+                   ((/= (position-of seq front) n) t)
+                   (t (iter (cdr seq) (1+ n))))))
+    (iter front 0)))
+           
+; but although it only uses constant space, it's not very efficient.
+
+; So there's probably something I'm missing.
+
+
 ; Exercise 3.20
 
 ;              +------------------------------------------------------------------+
