@@ -332,6 +332,10 @@
 
 ; So there's probably something I'm missing.
 
+; Yes - there is. Although SICP didn't specify the algorithm still had to run
+; in linear time, I think they were probably referring to Floyd's
+; cycle-finding algorithm. Wikipedia has an interesting article on it - very
+; elegant!
 
 ; Exercise 3.20
 
