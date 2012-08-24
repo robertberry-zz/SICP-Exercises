@@ -235,6 +235,20 @@
                (add-streams (mul-series s1 (stream-cdr s2))     ; Multiplies s1 by rest of s2
                             (mul-series (stream-cdr s1) s2))))  ; Multiplies s2 by rest of s1
 
+; it's not quite right ...
+
+; s * t = v
+
+; v[0] = s[0] * t[0]
+; v[1] = s[0] * t[1] + t[0] * s[1]
+; v[2] = s[0] * t[2] + t[0] * s[2] + (s[1] * t[1])  <- this term is being calculated twice
+; v[3] = s[0] * t[3] + t[0] * s[3] + s[1] * t[2] + t[1] * s[2]
+
+
+
+; TODO
+
+
 (define (powers x)
   (define stream
     (cons-stream 1
@@ -242,15 +256,12 @@
                               stream)))
   stream)
 
-;;;  todo: check works for the cosine + sine test
-
 (define (cosine-test x)
   (let ((xs (powers x)))
     (show 10 (add-streams (mul-streams xs (mul-series sine-series sine-series))
                           (mul-streams xs (mul-series cosine-series cosine-series))))))
 
-; Doesn't seem to...
 
-; todo ...
+
 
 
