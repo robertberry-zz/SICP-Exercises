@@ -258,3 +258,29 @@
 
 ; Exercise 3.61
 
+(define (invert-unit-series S)
+  (define stream
+    (cons-stream 1
+                 (negate-stream (mul-series (stream-cdr S)
+                                stream))))
+
+  stream)
+
+; Exercise 3.62
+
+(define (div-series numer denom)
+  (if (= (stream-car denom) 0)
+      (error "Cannot divide by a series with a zero constant term.")
+      (mul-series numer (invert-unit-series denom))))
+
+;; what about series that do not start with constant 1?
+
+(define tangent-series
+  (div-series sine-series cosine-series))
+
+(define (sum-stream s)
+  (if (null? s)
+      0
+      (+ (stream-car s)
+         (sum-stream (stream-cdr s)))))
+
