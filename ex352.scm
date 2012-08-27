@@ -1,6 +1,6 @@
 ; Answers for 3-5-2
 
-(load "ex351.scm")
+(load "~robert/sicp/SICP-Exercises/ex351.scm")
 
 (define (integers-starting-from n)
   (cons-stream n (integers-starting-from (+ n 1))))
@@ -230,23 +230,18 @@
 
 ; Exercise 3.60
 
-(define (mul-series s1 s2)
-  (cons-stream (* (stream-car s1) (stream-car s2))              ; Multiplies first terms
-               (add-streams (mul-series s1 (stream-cdr s2))     ; Multiplies s1 by rest of s2
-                            (mul-series (stream-cdr s1) s2))))  ; Multiplies s2 by rest of s1
-
-; it's not quite right ...
-
 ; s * t = v
 
 ; v[0] = s[0] * t[0]
 ; v[1] = s[0] * t[1] + t[0] * s[1]
-; v[2] = s[0] * t[2] + t[0] * s[2] + (s[1] * t[1])  <- this term is being calculated twice
+; v[2] = s[0] * t[2] + t[0] * s[2] + (s[1] * t[1])  
 ; v[3] = s[0] * t[3] + t[0] * s[3] + s[1] * t[2] + t[1] * s[2]
 
-
-
-; TODO
+(define (mul-series s1 s2)
+  (cons-stream (* (stream-car s1) (stream-car s2))
+               (add-streams (add-streams (scale-stream (stream-cdr s2) (stream-car s1))
+                                         (scale-stream (stream-cdr s1) (stream-car s2)))
+                            (cons-stream 0 (mul-series (stream-cdr s1) (stream-cdr s2))))))
 
 
 (define (powers x)
@@ -256,12 +251,10 @@
                               stream)))
   stream)
 
-(define (cosine-test x)
-  (let ((xs (powers x)))
-    (show 10 (add-streams (mul-streams xs (mul-series sine-series sine-series))
-                          (mul-streams xs (mul-series cosine-series cosine-series))))))
+(define (cosine-test)
+  (show 10 (add-streams (mul-series sine-series sine-series)
+                        (mul-series cosine-series cosine-series))))
 
 
-
-
+; Exercise 3.61
 
