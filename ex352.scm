@@ -1,6 +1,6 @@
 ; Answers for 3-5-2
 
-(load "~robert/sicp/SICP-Exercises/ex351.scm")
+(load "ex351.scm")
 
 (define (integers-starting-from n)
   (cons-stream n (integers-starting-from (+ n 1))))
@@ -202,11 +202,11 @@
 
 ; a)
 
-(define (div-series s1 s2)
+(define (div-streams s1 s2)
   (stream-map / s1 s2))
 
 (define (integrate-series s)
-  (div-series s integers))
+  (div-streams s integers))
 
 ; b)
 
@@ -218,11 +218,10 @@
   stream)
 
 (define (negate-stream s)
-  (mul-streams (constant-stream -1)
-               s))
+  (scale-stream s -1))
 
 (define cosine-series
-  (cons-stream 1 (integrate-series (negate-stream sine-series))))
+  (cons-stream 1 (negate-stream (integrate-series sine-series))))
 
 (define sine-series
   (cons-stream 0 (integrate-series cosine-series)))
@@ -261,19 +260,20 @@
 (define (invert-unit-series S)
   (define stream
     (cons-stream 1
-                 (negate-stream (mul-series (stream-cdr S)
-                                stream))))
-
+                 (mul-series (negate-stream (stream-cdr S)) stream)))
   stream)
 
 ; Exercise 3.62
 
-(define (div-series numer denom)
-  (if (= (stream-car denom) 0)
-      (error "Cannot divide by a series with a zero constant term.")
-      (mul-series numer (invert-unit-series denom))))
-
-;; what about series that do not start with constant 1?
+(define (div-series num den)
+  (let ((den0 (stream-car den)))
+    (if (= den0 0)
+        (error "The constant term of the denominator must be nonzero")
+        (scale-stream 
+         (mul-series 
+          num (invert-unit-series 
+               (scale-stream den (/ 1 den0))))
+         (/ 1 den0)))))
 
 (define tangent-series
   (div-series sine-series cosine-series))
