@@ -48,11 +48,11 @@
     (<= (+ (square (- x centre-x)) (square (- y centre-y)))
         (square radius))))
 
-(let ((x1 0)
-      (x2 1)
-      (y1 0)
-      (y2 1)
-      (p (make-circle-predicate 0.5 0.5 0.5)))
+(let ((x1 -1.0)
+      (x2 1.0)
+      (y1 -1.0)
+      (y2 1.0)
+      (p (make-circle-predicate 0 0 1.0)))
   (setf pi-estimate (estimate-integral p x1 x2 y1 y2 10000)))
 
 ; Exercise 3.6
