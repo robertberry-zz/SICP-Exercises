@@ -377,4 +377,63 @@
 ;; ((5 35) (17 31) (25 25))
 
 
-; ... todo
+(define (integral integrand initial-value dt)
+  (define int
+    (cons-stream initial-value
+                 (add-streams (scale-stream integrand dt)
+                              int)))
+  int)
+
+; Exercise 3.73
+
+(define (RC R C dt)
+  (lambda (i v0)
+    (let ((capacitor-stream (scale-stream i (/ 1 C))))
+      (cons-stream v0 (add-streams (scale-stream i R)
+                                   (integral (stream-cdr capacitor-stream)
+                                             (stream-car capacitor-stream)
+                                             dt))))))
+
+(define RC1 (RC 5 1 0.5))
+
+; Exercise 3.74
+
+(define (sign-change-detector x y)
+  (define (plus? n)
+    (>= n 0))
+  (let* ((x+ (plus? x))
+         (y+ (plus? y))
+         (x- (not x+))
+         (y- (not y+)))
+    (cond ((and x- y+) 1)
+          ((and x+ y-) -1)
+          (else 0))))
+
+(define zero-crossings
+  (stream-map sign-change-detector sense-data (stream-cdr sense-data)))
+
+; Exercise 3.75
+
+; The sign-change-detector needs to compare the current average with the last
+; average. But the current average needs to be worked out from the last-value.
+
+(define (make-zero-crossings input-stream last-value last-average)
+  (let ((avpt (/ (+ (stream-car input-stream) last-value) 2)))
+    (cons-stream (sign-change-detector avpt last-average)
+                 (make-zero-crossings (stream-cdr input-stream)
+                                      (stream-car input-stream)
+                                      avpt))))
+
+; Exercise 3.76
+
+(define (average x y)
+  (/ (+ x y) 2))
+
+(define (smooth S)
+  (stream-map average S (stream-cdr S)))
+
+(define smoothed-sense-data (smooth sense-data))
+
+(define zero-crossings
+  (stream-map sign-change-detector smoothed-sense-data (stream-cdr smoothed-sense-data)))
+
