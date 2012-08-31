@@ -20,6 +20,8 @@
         (else
          (error "Unknown expression type -- EVAL" exp))))
 
+(define apply-in-underlying-scheme apply)
+
 (define (apply procedure arguments)
   (cond ((primitive-procedure? procedure)
          (apply-primitive-procedure procedure arguments))

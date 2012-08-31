@@ -136,10 +136,36 @@
 
 ; Exercise 4.3
 
-;; TODO ... (I want to have a fully defined evaluator first so I can check the
-;; result of my changes!)
+(load "generics.scm")
 
+(define (eval exp env)
+  (cond ((self-evaluating? exp) exp)
+        ((variable? exp) (lookup-variable-value exp env))
+        (else (let ((proc (get 'eval (car exp))))
+                (display proc)
+                (cond (proc (proc exp env))
+                      ((application? exp) (apply (eval (operator exp) env)
+                                                 (list-of-values (operands exp) env)))
+                      (else
+                       (error "Unknown expression type -- EVAL" exp)))))))
 
+(put 'eval 'quote (lambda (exp env)
+                    (text-of-quotation exp)))
+
+(put 'eval 'define eval-definition)
+(put 'eval 'set! eval-assignment)
+(put 'eval 'if eval-if)
+
+(put 'eval 'lambda (lambda (exp env)
+                     (make-procedure (lambda-parameters exp)
+                                     (lambda-body exp)
+                                     env)))
+
+(put 'eval 'begin (lambda (exp env)
+                    (eval-sequence (begin-actions exp) env)))
+
+(put 'eval 'cond (lambda (exp env)
+                   (eval (cond->if exp) env)))
 
 ; Exercise 4.4
 
@@ -154,8 +180,11 @@
 (define (rest-expressions exps)
   (cdr exps))
 
+(define (true? x)
+  (not (eq? x 'false)))
+
 (define (false? x)
-  (not (true? x)))
+  (eq? x 'false))
 
 (define (eval-and exp env)
   (define (iter exprs)
@@ -181,6 +210,9 @@
               false
               (iter rest)))))
   (iter (or-expressions exp)))
+
+(put 'eval 'and eval-and)
+(put 'eval 'or eval-or)
 
 ; b)
 
@@ -247,7 +279,6 @@
 ;; Value 17: ((lambda (gensym-1) (if gensym-1 gensym-1 ((lambda (gensym-2)
 ;;           (if gensym-2 gensym-2 c)) b))) a)
 
-;; todo: add to eval
 
 ; Exercise 4.5
 
@@ -313,8 +344,8 @@
 
 ;; ;Value 32: ((lambda (x y) (+ x y)) 1 (+ 2 3))
 
-;; todo: add to eval
-
+(put 'eval 'let (lambda (exp env)
+                  (eval (let->combination exp) env)))
 
 ; Exercise 4.7
 
@@ -341,8 +372,11 @@
 ; environment in which to evaluate its body which has its variables
 ; available. The body then contains the next let expression, etc.
 
-;; todo: add to eval, explain why it is sufficient to do that
+; It's sufficient to add to eval, as eval is recursively called, which then
+; expands out the lets, and then finally evaluates the lambdas.
 
+(put 'eval 'let* (lambda (exp env)
+                   (eval (let*->nested-lets exp) env)))
 
 ; Exercise 4.8
 
@@ -439,10 +473,13 @@
 
 ;; ;Value 30: (while (not (= n 10)) ((+ n 1) (print n)))
 
+(put 'eval 'while (lambda (exp env)
+                    (eval (while->combination exp) env)))
 
-;; todo: add these to eval
-
+(put 'eval 'until (lambda (exp env)
+                    (eval (until->combination exp) env)))
 
 ; Exercise 4.10
 
-;; todo
+;; todo: do this later, no point now as we don't have the environment data
+;; structures with which to test any changes
