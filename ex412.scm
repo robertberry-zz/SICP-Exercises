@@ -323,7 +323,7 @@
   (cadr exp))
 
 (define (let-body exp)
-  (caddr exp))
+  (cddr exp))
 
 (define (let->combination exp)
   (expand-let (let-clauses exp) (let-body exp)))
@@ -337,7 +337,7 @@
 (define (expand-let clauses body)
   (let ((vars (map let-clause-variable clauses))
         (exprs (map let-clause-expression clauses)))
-    (make-application (make-lambda vars (list body))
+    (make-application (make-lambda vars body)
                       exprs)))
 
 ;; 1 ]=> (let->combination '(let ((x 1) (y (+ 2 3))) (+ x y)))
@@ -350,7 +350,7 @@
 ; Exercise 4.7
 
 (define (make-let clauses body)
-  (list 'let clauses body))
+  (append (list 'let clauses) body))
 
 (define (let*->nested-lets exp)
   (expand-let* (let-clauses exp) (let-body exp)))
@@ -362,7 +362,7 @@
         (make-let (list first)
                   body)
         (make-let (list first)
-                  (expand-let* (cdr clauses) body)))))
+                  (list (expand-let* (cdr clauses) body))))))
 
 ;; 1 ]=> (let*->nested-lets '(let* ((x 3) (y (+ x 2)) (z (+ x y 5))) (* x z)))
 
@@ -406,7 +406,7 @@
 (define (expand-named-let proc-name clauses body)
   (let ((vars (map let-clause-variable clauses))
         (initial-values (map let-clause-expression clauses)))
-    (make-let-proc proc-name vars (list body)
+    (make-let-proc proc-name vars body
                    (make-application proc-name initial-values))))
 
 ;; 1 ]=> (let->combination '(let fib-iter ((a 1) (b 0) (count n)) (if (= count 0) b (fib-iter (+ a b) a (- count 1)))))
