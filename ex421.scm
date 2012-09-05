@@ -3,7 +3,8 @@
 ; Exercise 4.25
 
 ;; It will crash due to an infinite loop. One of the arguments to unless is a
-;; call to factorial, which results in this.
+;; call to factorial, which results in this, as it must be evaluated before
+;; unless is.
 
 ;; In normal order, it works.
 
