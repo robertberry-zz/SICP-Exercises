@@ -1,0 +1,16 @@
+Exercise 5.1
+
+Initially set N to the value for which you want to work out the factorial.
+
+See ex5_factorial.svg for data paths.
+
+See ex5_factorial_controller.svg for controller.
+
+P contains the answer.
+
+
+Note: another way to approach this would be to require the user to initially
+set the P and C registers to 1 manually, rather than include the instructions
+as part of the data paths and controller. I'm not sure what is the preferred
+method.
+
