@@ -57,7 +57,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -221,7 +221,7 @@
            height="32.324883"
            x="32.324883"
            y="119.99139" /></flowRegion><flowPara
-         id="flowPara4588">c&lt;-c*p</flowPara></flowRoot>    <rect
+         id="flowPara4588">p&lt;-c*p</flowPara></flowRoot>    <rect
        style="fill:none;stroke:#000000;stroke-width:0.73280638"
        id="rect2985-9-9"
        width="48.754513"
