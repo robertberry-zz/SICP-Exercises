@@ -1,0 +1,31 @@
+// Data-flow diagram for Exponent register machine
+
+digraph IterativeExponent {
+        // constants
+        1 [shape=triangle];
+        0 [shape=triangle];
+
+        // registers
+        n [shape=box];
+        b [shape=box];
+        product [shape=box];
+        counter [shape=box];
+        
+        // operations
+        "*" [shape=polygon,sides=4,distortion=0.6];
+        "-" [shape=polygon,sides=4,distortion=0.6];
+
+        // tests
+        "=";
+
+        // edges
+        1 -> product;
+        n -> "=";
+        0 -> "=";
+        "-" -> counter [weight=8];
+        counter -> "-";
+        1 -> "-";
+        "*" -> product [weight=8];
+        product -> "*";
+        b -> "*";
+}

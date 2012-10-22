@@ -1,0 +1,42 @@
+// Data-flow diagram for Exponent register machine
+
+digraph Exponent {
+        // the stack
+        stack [shape=box];
+        
+        // labels
+        "expt-done" [shape=triangle];
+        "after-expt" [shape=triangle];
+
+        // constants
+        1 [shape=triangle];
+        0 [shape=triangle];
+
+        // registers
+        n [shape=box];
+        b [shape=box];
+        continue [shape=box];
+        val [shape=box];
+        
+        // operations
+        "*" [shape=polygon,sides=4,distortion=0.6];
+        "-" [shape=polygon,sides=4,distortion=0.6];
+
+        // tests
+        "=";
+
+        // edges
+        "expt-done" -> continue;
+        n -> "=";
+        0 -> "=";
+        continue -> stack;
+        "after-expt" -> continue;
+        "-" -> n;
+        n -> "-";
+        1 -> "-";
+        stack -> continue;
+        "*" -> val;
+        val -> "*";
+        b -> "*";
+        1 -> val;
+}
