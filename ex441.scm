@@ -96,7 +96,7 @@
 ;; could write
 
 (and (lives-near ?a ?b)
-     (symbol< ?a ?b))
+     (symbol<? ?a ?b))
 
 
 ;; Exercise 4.61
