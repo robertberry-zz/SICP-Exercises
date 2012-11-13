@@ -124,6 +124,7 @@
 	(list '/ /)
 	(list '> >)
 	(list '< <)
+        (list 'display display)
         ))
 
 (define (primitive-procedure-names)
