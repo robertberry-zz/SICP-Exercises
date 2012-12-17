@@ -345,3 +345,10 @@ ev-definition-1
 
 ;; todo ...
 
+;; TBH I have no idea how to express this in terms of fib(n + 1). Will have to
+;; come back to it when I do.
+
+
+; Exercise 5.30
+
+; a)
